@@ -1,5 +1,5 @@
 data "aws_vpc" "main" {
-  id = var.vpc_id
+  id = data.terraform_remote_state.network.outputs.vpc_id
 }
 
 data "aws_ecr_repository" "api" {

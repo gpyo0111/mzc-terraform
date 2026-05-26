@@ -1,5 +1,5 @@
 data "aws_vpc" "main" {
-  id = var.vpc_id
+  id = data.terraform_remote_state.network.outputs.vpc_id
 }
 
 resource "aws_s3_bucket" "model" {
@@ -38,7 +38,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "model" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-${var.env}-db-subnet-group"
-  subnet_ids = var.private_db_subnet_ids
+  subnet_ids = data.terraform_remote_state.network.outputs.private_data_subnet_ids
 
   tags = {
     Name        = "${var.project_name}-${var.env}-db-subnet-group"
@@ -57,7 +57,7 @@ resource "aws_security_group" "rds" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = var.private_app_subnet_cidrs
+    cidr_blocks = data.terraform_remote_state.network.outputs.private_app_subnet_cidrs
   }
 
   egress {
@@ -87,9 +87,11 @@ resource "aws_db_instance" "mysql" {
   storage_type          = "gp3"
   storage_encrypted     = true
 
-  db_name  = var.db_name
-  username = var.db_username
-  password = var.db_password
+  snapshot_identifier = var.rds_snapshot_identifier != "" ? var.rds_snapshot_identifier : null
+
+  db_name  = var.rds_snapshot_identifier == "" ? var.db_name : null
+  username = var.rds_snapshot_identifier == "" ? var.db_username : null
+  password = var.rds_snapshot_identifier == "" ? var.db_password : null
 
   port                   = 3306
   db_subnet_group_name   = aws_db_subnet_group.main.name

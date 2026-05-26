@@ -108,7 +108,7 @@ resource "aws_instance" "db_admin" {
   ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = "t3.micro"
 
-  subnet_id = var.private_app_subnet_ids[0]
+  subnet_id = data.terraform_remote_state.network.outputs.private_app_subnet_ids[0]
 
   associate_public_ip_address = false
 

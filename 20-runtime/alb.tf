@@ -4,7 +4,7 @@ resource "aws_lb" "api" {
   load_balancer_type = "application"
 
   security_groups = [aws_security_group.alb.id]
-  subnets         = var.public_subnet_ids
+  subnets         = data.terraform_remote_state.network.outputs.public_subnet_ids
 
   tags = local.common_tags
 }

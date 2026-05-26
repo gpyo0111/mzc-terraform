@@ -104,7 +104,7 @@ resource "aws_ecs_service" "api" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_app_subnet_ids
+    subnets          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
   }
@@ -195,7 +195,7 @@ resource "aws_ecs_service" "free_worker" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_app_subnet_ids
+    subnets          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
   }
@@ -276,7 +276,7 @@ resource "aws_ecs_service" "paid_worker" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_app_subnet_ids
+    subnets          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
   }
