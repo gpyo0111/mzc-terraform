@@ -10,6 +10,7 @@
 
 db_password = "mzmt1234"
 
+rds_snapshot_identifier = "securevoice-dev-mysql-before-vpc-rebuild-202605260952"
 
 --------------------------------------------------
 [ 20-runtime/terraform.tfvars ]
