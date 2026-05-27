@@ -1,7 +1,9 @@
+# 현재 환경이 사용할 기존 VPC를 조회한다.
 data "aws_vpc" "main" {
-  id = data.terraform_remote_state.network.outputs.vpc_id
+  id = var.vpc_id
 }
 
+# 모델 파일을 저장할 S3 버킷을 만든다.
 resource "aws_s3_bucket" "model" {
   bucket = var.model_bucket_name
 
@@ -17,6 +19,7 @@ resource "aws_s3_bucket" "model" {
   }
 }
 
+# S3 버킷의 퍼블릭 접근을 전부 차단한다.
 resource "aws_s3_bucket_public_access_block" "model" {
   bucket = aws_s3_bucket.model.id
 
@@ -26,6 +29,7 @@ resource "aws_s3_bucket_public_access_block" "model" {
   restrict_public_buckets = true
 }
 
+# 버킷 데이터를 기본적으로 AES256으로 암호화한다.
 resource "aws_s3_bucket_server_side_encryption_configuration" "model" {
   bucket = aws_s3_bucket.model.id
 
@@ -36,9 +40,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "model" {
   }
 }
 
+# RDS가 사용할 DB subnet group을 만든다.
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-${var.env}-db-subnet-group"
-  subnet_ids = data.terraform_remote_state.network.outputs.private_data_subnet_ids
+  subnet_ids = var.private_db_subnet_ids
 
   tags = {
     Name        = "${var.project_name}-${var.env}-db-subnet-group"
@@ -47,6 +52,7 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
+# 애플리케이션 프라이빗 서브넷에서만 MySQL 접속을 허용하는 RDS 보안그룹이다.
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-${var.env}-rds-sg"
   description = "Allow MySQL from ECS private app subnets"
@@ -57,7 +63,7 @@ resource "aws_security_group" "rds" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = data.terraform_remote_state.network.outputs.private_app_subnet_cidrs
+    cidr_blocks = var.private_app_subnet_cidrs
   }
 
   egress {
@@ -75,6 +81,7 @@ resource "aws_security_group" "rds" {
   }
 }
 
+# 실제 MySQL 데이터베이스 인스턴스를 생성한다.
 resource "aws_db_instance" "mysql" {
   identifier = "${var.project_name}-${var.env}-mysql"
 
@@ -100,9 +107,15 @@ resource "aws_db_instance" "mysql" {
 
   multi_az = true
 
-  backup_retention_period = 7
-  skip_final_snapshot     = true
-  deletion_protection     = true
+  backup_retention_period  = 7
+  backup_window            = "18:00-19:00"
+  maintenance_window       = "sun:19:00-sun:20:00"
+  copy_tags_to_snapshot    = true
+  delete_automated_backups = false
+
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "${var.project_name}-${var.env}-mysql-final-${var.final_snapshot_date}"
+  deletion_protection       = true
 
   auto_minor_version_upgrade = false
 
@@ -117,6 +130,7 @@ resource "aws_db_instance" "mysql" {
   }
 }
 
+# DB 비밀번호를 저장할 Secrets Manager 시크릿을 만든다.
 resource "aws_secretsmanager_secret" "db_password" {
   name = "${var.project_name}/${var.env}/db-password"
 
@@ -132,11 +146,13 @@ resource "aws_secretsmanager_secret" "db_password" {
   }
 }
 
+# DB 비밀번호 값을 시크릿에 저장한다.
 resource "aws_secretsmanager_secret_version" "db_password" {
   secret_id     = aws_secretsmanager_secret.db_password.id
   secret_string = var.db_password
 }
 
+# JWT 서명 키를 저장할 Secrets Manager 시크릿을 만든다.
 resource "aws_secretsmanager_secret" "jwt_secret_key" {
   name = "${var.project_name}/${var.env}/jwt-secret-key"
 
@@ -152,6 +168,7 @@ resource "aws_secretsmanager_secret" "jwt_secret_key" {
   }
 }
 
+# JWT 서명 키 값을 시크릿에 저장한다.
 resource "aws_secretsmanager_secret_version" "jwt_secret_key" {
   secret_id     = aws_secretsmanager_secret.jwt_secret_key.id
   secret_string = "change-this-jwt-secret-key-before-demo"
