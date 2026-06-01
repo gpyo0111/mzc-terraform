@@ -25,3 +25,31 @@ output "api_target_group_arn" {
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.main.name
 }
+
+output "api_ecr_repository_url" {
+  value = data.aws_ecr_repository.api.repository_url
+}
+
+output "worker_ecr_repository_url" {
+  value = data.aws_ecr_repository.worker.repository_url
+}
+
+output "api_service_name" {
+  value = aws_ecs_service.api.name
+}
+
+output "free_worker_service_name" {
+  value = aws_ecs_service.free_worker.name
+}
+
+output "paid_worker_service_name" {
+  value = aws_ecs_service.paid_worker.name
+}
+
+output "jenkins_instance_id" {
+  value = aws_instance.jenkins.id
+}
+
+output "jenkins_target_group_arn" {
+  value = aws_lb_target_group.jenkins.arn
+}
