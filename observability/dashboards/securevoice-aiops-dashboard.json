@@ -1,0 +1,122 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 2,
+      "properties": {
+        "markdown": "# SecureVoice AIOps Observability\nCloudWatch + Container Insights 기반 ECS / SQS / RDS / ALB 운영 지표"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 2,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ECS Service CPU Utilization",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [ "AWS/ECS", "CPUUtilization", "ClusterName", "securevoice-dev-cluster", "ServiceName", "securevoice-dev-api-service" ],
+          [ ".", ".", ".", ".", "ServiceName", "securevoice-dev-free-worker-service" ],
+          [ ".", ".", ".", ".", "ServiceName", "securevoice-dev-paid-worker-service" ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 2,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ECS Service Memory Utilization",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [ "AWS/ECS", "MemoryUtilization", "ClusterName", "securevoice-dev-cluster", "ServiceName", "securevoice-dev-api-service" ],
+          [ ".", ".", ".", ".", "ServiceName", "securevoice-dev-free-worker-service" ],
+          [ ".", ".", ".", ".", "ServiceName", "securevoice-dev-paid-worker-service" ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "SQS Queue Depth",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [ "AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "free-queue" ],
+          [ ".", ".", "QueueName", "paid-queue" ],
+          [ ".", ".", "QueueName", "free-dlq" ],
+          [ ".", ".", "QueueName", "paid-dlq" ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "SQS Oldest Message Age",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Maximum",
+        "metrics": [
+          [ "AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "free-queue" ],
+          [ ".", ".", "QueueName", "paid-queue" ],
+          [ ".", ".", "QueueName", "free-dlq" ],
+          [ ".", ".", "QueueName", "paid-dlq" ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 14,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "RDS CPU / Connections",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "securevoice-dev-db" ],
+          [ ".", "DatabaseConnections", ".", "." ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 14,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ALB 5XX / Target Response Time",
+        "region": "ap-northeast-2",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [ "AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "app/securevoice-dev-api-alb/464fb83fd6f04671" ],
+          [ ".", "TargetResponseTime", ".", "." ]
+        ]
+      }
+    }
+  ]
+}

@@ -22,11 +22,13 @@ db_password_secret_arn   = "arn:aws:secretsmanager:ap-northeast-2:455535733131:s
 jwt_secret_key_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:455535733131:secret:securevoice/dev/jwt-secret-key-NUu01p"
 
 api_image_tag    = "7886a43"
-worker_image_tag = "187b6a9"
+
+worker_image_tag = "757f8a8"
 
 
 --------------------------------------------------
 [ 참고 ]
+
 --------------------------------------------------
 
 - 위 값들은 현재 공통 개발 환경(dev) 기준입니다.
