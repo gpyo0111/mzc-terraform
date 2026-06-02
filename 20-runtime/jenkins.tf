@@ -179,8 +179,9 @@ resource "aws_instance" "jenkins" {
     #!/bin/bash
     set -eux
 
-        dnf update -y
+    dnf update -y
     dnf install -y docker git python3 python3-pip awscli
+
     dnf install -y docker-compose-plugin || true
     systemctl enable --now docker
 
@@ -309,7 +310,7 @@ resource "aws_lb_target_group" "jenkins" {
   health_check {
     enabled             = true
     path                = "/login"
-    matcher             = "200-399"
+    matcher             = "200-499"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
