@@ -240,12 +240,28 @@ resource "aws_instance" "jenkins" {
     RUN apt-get update && \
         apt-get install -y --no-install-recommends \
           awscli \
-          docker.io \
           git \
           python3 \
           python3-pip \
-          python3-venv && \
+          python3-venv \
+          ca-certificates \
+          curl \
+          tar \
+          gzip && \
         rm -rf /var/lib/apt/lists/*
+
+    RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.5.1.tgz -o /tmp/docker.tgz && \
+        tar -xzf /tmp/docker.tgz -C /tmp && \
+        mv /tmp/docker/docker /usr/local/bin/docker && \
+        chmod +x /usr/local/bin/docker && \
+        rm -rf /tmp/docker /tmp/docker.tgz
+
+    RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
+        curl -fsSL https://github.com/docker/buildx/releases/download/v0.34.1/buildx-v0.34.1.linux-amd64 \
+          -o /usr/local/lib/docker/cli-plugins/docker-buildx && \
+        chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx && \
+        docker buildx version
+
     USER jenkins
     DOCKERFILE
 
