@@ -173,12 +173,15 @@ resource "aws_instance" "jenkins" {
   iam_instance_profile        = aws_iam_instance_profile.jenkins.name
   associate_public_ip_address = false
 
+  user_data_replace_on_change = true
+
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
     dnf update -y
-    dnf install -y docker git python3 python3-pip awscli curl
+    dnf install -y docker git python3 python3-pip awscli
+
     dnf install -y docker-compose-plugin || true
     systemctl enable --now docker
 
@@ -212,6 +215,7 @@ resource "aws_instance" "jenkins" {
           break
         fi
       done
+
       if [ -n "$JENKINS_HOME_DEVICE" ] && [ -b "$JENKINS_HOME_DEVICE" ]; then
         break
       fi
@@ -230,6 +234,7 @@ resource "aws_instance" "jenkins" {
     else
       echo "Jenkins home EBS device was not found. Continuing with root volume path /var/jenkins_home."
     fi
+
     chown -R 1000:1000 /var/jenkins_home
 
     mkdir -p /opt/jenkins
