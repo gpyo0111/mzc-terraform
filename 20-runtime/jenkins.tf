@@ -173,26 +173,57 @@ resource "aws_instance" "jenkins" {
   iam_instance_profile        = aws_iam_instance_profile.jenkins.name
   associate_public_ip_address = false
 
+  user_data_replace_on_change = true
+
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
     dnf update -y
     dnf install -y docker git python3 python3-pip awscli
+    dnf install -y docker-compose-plugin || true
     systemctl enable --now docker
 
-    mkdir -p /var/jenkins_home
-    for i in $(seq 1 30); do
-      if [ -b /dev/xvdf ]; then
-        break
-      fi
-      sleep 2
-    done
-    if ! blkid /dev/xvdf; then
-      mkfs -t xfs /dev/xvdf
+    if ! docker compose version; then
+      mkdir -p /usr/local/lib/docker/cli-plugins
+      COMPOSE_VERSION="2.29.7"
+      curl -fsSL "https://github.com/docker/compose/releases/download/v$COMPOSE_VERSION/docker-compose-linux-x86_64" \
+        -o /usr/local/lib/docker/cli-plugins/docker-compose
+      chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+      docker compose version
     fi
-    echo "/dev/xvdf /var/jenkins_home xfs defaults,nofail 0 2" >> /etc/fstab
-    mount -a
+
+    mkdir -p /var/jenkins_home
+
+    ROOT_SOURCE="$(findmnt -n -o SOURCE /)"
+    ROOT_DISK="/dev/$(lsblk -no PKNAME "$ROOT_SOURCE" 2>/dev/null || true)"
+    JENKINS_HOME_DEVICE="$(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' | grep -vx "$ROOT_DISK" | head -n 1 || true)"
+
+    if [ -z "$JENKINS_HOME_DEVICE" ]; then
+      for candidate in /dev/nvme1n1 /dev/nvme2n1 /dev/xvdf; do
+        if [ -b "$candidate" ] && [ "$candidate" != "$ROOT_DISK" ]; then
+          JENKINS_HOME_DEVICE="$candidate"
+          break
+        fi
+      done
+    fi
+
+    if [ -n "$JENKINS_HOME_DEVICE" ]; then
+      if ! blkid "$JENKINS_HOME_DEVICE"; then
+        mkfs -t xfs "$JENKINS_HOME_DEVICE"
+      fi
+
+      JENKINS_HOME_UUID="$(blkid -s UUID -o value "$JENKINS_HOME_DEVICE")"
+
+      if ! grep -q "/var/jenkins_home" /etc/fstab; then
+        echo "UUID=$JENKINS_HOME_UUID /var/jenkins_home xfs defaults,nofail 0 2" >> /etc/fstab
+      fi
+
+      mount -a
+    else
+      echo "Jenkins home EBS device was not found. Continuing with root volume path /var/jenkins_home."
+    fi
+
     chown -R 1000:1000 /var/jenkins_home
 
     mkdir -p /opt/jenkins
@@ -218,6 +249,7 @@ resource "aws_instance" "jenkins" {
         build: .
         container_name: jenkins
         restart: unless-stopped
+        user: root
         ports:
           - "8080:8080"
           - "50000:50000"
@@ -229,7 +261,7 @@ resource "aws_instance" "jenkins" {
           - /var/run/docker.sock:/var/run/docker.sock
     COMPOSE
 
-    docker compose -f /opt/jenkins/docker-compose.yml up -d
+    docker compose -f /opt/jenkins/docker-compose.yml up -d --build
   EOF
 
   root_block_device {
