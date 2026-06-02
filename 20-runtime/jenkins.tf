@@ -179,7 +179,7 @@ resource "aws_instance" "jenkins" {
     #!/bin/bash
     set -eux
 
-    dnf update -y
+        dnf update -y
     dnf install -y docker git python3 python3-pip awscli
     dnf install -y docker-compose-plugin || true
     systemctl enable --now docker
@@ -200,25 +200,35 @@ resource "aws_instance" "jenkins" {
     JENKINS_HOME_DEVICE="$(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' | grep -vx "$ROOT_DISK" | head -n 1 || true)"
 
     if [ -z "$JENKINS_HOME_DEVICE" ]; then
+      echo "Could not discover Jenkins home EBS by excluding root disk. Falling back to known device names."
+    fi
+
+    for i in $(seq 1 30); do
+      if [ -n "$JENKINS_HOME_DEVICE" ] && [ -b "$JENKINS_HOME_DEVICE" ]; then
+        break
+      fi
+
       for candidate in /dev/nvme1n1 /dev/nvme2n1 /dev/xvdf; do
         if [ -b "$candidate" ] && [ "$candidate" != "$ROOT_DISK" ]; then
           JENKINS_HOME_DEVICE="$candidate"
           break
         fi
       done
-    fi
+
+      if [ -n "$JENKINS_HOME_DEVICE" ] && [ -b "$JENKINS_HOME_DEVICE" ]; then
+        break
+      fi
+      sleep 2
+    done
 
     if [ -n "$JENKINS_HOME_DEVICE" ]; then
       if ! blkid "$JENKINS_HOME_DEVICE"; then
         mkfs -t xfs "$JENKINS_HOME_DEVICE"
       fi
-
       JENKINS_HOME_UUID="$(blkid -s UUID -o value "$JENKINS_HOME_DEVICE")"
-
       if ! grep -q "/var/jenkins_home" /etc/fstab; then
         echo "UUID=$JENKINS_HOME_UUID /var/jenkins_home xfs defaults,nofail 0 2" >> /etc/fstab
       fi
-
       mount -a
     else
       echo "Jenkins home EBS device was not found. Continuing with root volume path /var/jenkins_home."
