@@ -3,7 +3,6 @@
 # - ECR API
 # - ECR DKR
 # - CloudWatch Logs
-# - Secrets Manager
 # - STS
 #################################################
 
@@ -69,19 +68,6 @@ resource "aws_vpc_endpoint" "logs" {
 
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-${var.env}-logs-endpoint"
-  })
-}
-
-resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id              = data.aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
-  security_group_ids  = [aws_security_group.runtime_vpce.id]
-  private_dns_enabled = true
-
-  tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.env}-secretsmanager-endpoint"
   })
 }
 

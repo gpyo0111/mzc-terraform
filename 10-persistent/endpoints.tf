@@ -2,6 +2,7 @@
 # Persistent VPC Endpoints
 # - S3 Gateway
 # - SSM for DB Admin EC2
+# - Secrets Manager for DB bootstrap and admin tasks
 #################################################
 
 resource "aws_security_group" "persistent_vpce" {
@@ -88,6 +89,21 @@ resource "aws_vpc_endpoint" "ssmmessages" {
 
   tags = {
     Name        = "${var.project_name}-${var.env}-ssmmessages-endpoint"
+    Project     = var.project_name
+    Environment = var.env
+  }
+}
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
+  security_group_ids  = [aws_security_group.persistent_vpce.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name        = "${var.project_name}-${var.env}-secretsmanager-endpoint"
     Project     = var.project_name
     Environment = var.env
   }

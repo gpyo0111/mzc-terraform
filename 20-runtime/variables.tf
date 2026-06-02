@@ -38,30 +38,6 @@ variable "model_bucket_name" {
   default = "mzc-securevoiceguard-model-dev-455535733131-ap-northeast-2"
 }
 
-variable "db_host" {
-  type = string
-}
-
-variable "db_name" {
-  type    = string
-  default = "mzmt_db"
-}
-
-variable "db_user" {
-  type    = string
-  default = "mzmt"
-}
-
-variable "db_password_secret_arn" {
-  type      = string
-  sensitive = true
-}
-
-variable "jwt_secret_key_secret_arn" {
-  type      = string
-  sensitive = true
-}
-
 variable "api_image_tag" {
   type        = string
   description = "API image tag. Use git SHA tag."

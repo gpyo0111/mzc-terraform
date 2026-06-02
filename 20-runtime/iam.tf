@@ -34,8 +34,8 @@ resource "aws_iam_policy" "ecs_task_execution_secrets" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.db_password_secret_arn,
-          var.jwt_secret_key_secret_arn
+          data.terraform_remote_state.persistent.outputs.db_app_password_secret_arn,
+          data.terraform_remote_state.persistent.outputs.jwt_secret_key_secret_arn
         ]
       }
     ]

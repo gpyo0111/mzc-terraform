@@ -1,6 +1,6 @@
 # 현재 환경이 사용할 기존 VPC를 조회한다.
 data "aws_vpc" "main" {
-  id = var.vpc_id
+  id = data.terraform_remote_state.network.outputs.vpc_id
 }
 
 # 모델 파일을 저장할 S3 버킷을 만든다.
@@ -43,7 +43,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "model" {
 # RDS가 사용할 DB subnet group을 만든다.
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-${var.env}-db-subnet-group"
-  subnet_ids = var.private_db_subnet_ids
+  subnet_ids = data.terraform_remote_state.network.outputs.private_data_subnet_ids
 
   tags = {
     Name        = "${var.project_name}-${var.env}-db-subnet-group"
@@ -63,7 +63,15 @@ resource "aws_security_group" "rds" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = var.private_app_subnet_cidrs
+    cidr_blocks = data.terraform_remote_state.network.outputs.private_app_subnet_cidrs
+  }
+
+  ingress {
+    description     = "Allow MySQL from DB admin EC2"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.db_admin.id]
   }
 
   egress {
@@ -79,6 +87,7 @@ resource "aws_security_group" "rds" {
     Project     = var.project_name
     Environment = var.env
   }
+
 }
 
 # 실제 MySQL 데이터베이스 인스턴스를 생성한다.
@@ -96,9 +105,11 @@ resource "aws_db_instance" "mysql" {
 
   snapshot_identifier = var.rds_snapshot_identifier != "" ? var.rds_snapshot_identifier : null
 
-  db_name  = var.rds_snapshot_identifier == "" ? var.db_name : null
-  username = var.rds_snapshot_identifier == "" ? var.db_username : null
-  password = var.rds_snapshot_identifier == "" ? var.db_password : null
+  # 새 DB 생성 시 초기 DB명과 master 계정명을 지정한다.
+  # master 비밀번호는 Terraform 변수로 받지 않고 RDS가 Secrets Manager에서 자동 관리한다.
+  db_name                     = var.rds_snapshot_identifier == "" ? var.db_name : null
+  username                    = var.rds_snapshot_identifier == "" ? var.db_master_username : null
+  manage_master_user_password = true
 
   port                   = 3306
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -130,7 +141,8 @@ resource "aws_db_instance" "mysql" {
   }
 }
 
-# DB 비밀번호를 저장할 Secrets Manager 시크릿을 만든다.
+# ECS API/worker가 사용할 app DB password secret의 껍데기만 만든다.
+# 실제 비밀번호 값은 Terraform state에 남기지 않기 위해 bootstrap 스크립트가 put-secret-value로 저장한다.
 resource "aws_secretsmanager_secret" "db_password" {
   name = "${var.project_name}/${var.env}/db-password"
 
@@ -144,12 +156,6 @@ resource "aws_secretsmanager_secret" "db_password" {
   lifecycle {
     prevent_destroy = true
   }
-}
-
-# DB 비밀번호 값을 시크릿에 저장한다.
-resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = var.db_password
 }
 
 # JWT 서명 키를 저장할 Secrets Manager 시크릿을 만든다.
