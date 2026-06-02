@@ -91,3 +91,19 @@ variable "paid_worker_desired_count" {
   type    = number
   default = 1
 }
+
+variable "jenkins_instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
+variable "jenkins_volume_size" {
+  type    = number
+  default = 30
+}
+
+variable "enable_jenkins_webhook_alb_rule" {
+  type        = bool
+  default     = false
+  description = "Set true only after team approval to route /github-webhook/* from the service ALB to Jenkins."
+}

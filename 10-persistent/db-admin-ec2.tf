@@ -44,10 +44,10 @@ resource "aws_security_group" "db_admin" {
 #################################################
 
 resource "aws_security_group_rule" "rds_from_db_admin" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
+  type      = "ingress"
+  from_port = 3306
+  to_port   = 3306
+  protocol  = "tcp"
 
   security_group_id        = aws_security_group.rds.id
   source_security_group_id = aws_security_group.db_admin.id
@@ -85,7 +85,7 @@ resource "aws_iam_role" "db_admin" {
 }
 
 resource "aws_iam_role_policy_attachment" "db_admin_ssm" {
-  role       = aws_iam_role.db_admin.name
+  role = aws_iam_role.db_admin.name
 
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }

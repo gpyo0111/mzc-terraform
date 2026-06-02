@@ -18,7 +18,7 @@ resource "aws_lb_target_group" "api" {
 
   health_check {
     enabled             = true
-    path                = "/health"
+    path                = "/api/health"
     matcher             = "200"
     interval            = 30
     timeout             = 5
@@ -58,5 +58,22 @@ resource "aws_lb_listener_rule" "api" {
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
+  }
+}
+
+data "aws_route53_zone" "main" {
+  name         = "mzmt.shop."
+  private_zone = false
+}
+
+resource "aws_route53_record" "api_origin" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "api-origin.mzmt.shop"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.api.dns_name
+    zone_id                = aws_lb.api.zone_id
+    evaluate_target_health = true
   }
 }
