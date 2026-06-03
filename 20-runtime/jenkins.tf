@@ -173,12 +173,14 @@ resource "aws_instance" "jenkins" {
   iam_instance_profile        = aws_iam_instance_profile.jenkins.name
   associate_public_ip_address = false
 
+  user_data_replace_on_change = true
+
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
     dnf update -y
-    dnf install -y docker git python3 python3-pip awscli curl
+    dnf install -y docker git python3 python3-pip awscli
     dnf install -y docker-compose-plugin || true
     systemctl enable --now docker
 
