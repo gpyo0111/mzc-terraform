@@ -6,6 +6,10 @@ output "rds_endpoint" {
   value = aws_db_instance.mysql.address
 }
 
+output "rds_proxy_endpoint" {
+  value = aws_db_proxy.mysql.endpoint
+}
+
 output "db_name" {
   value = var.db_name
 }
@@ -39,6 +43,11 @@ output "db_password_secret_arn" {
 
 # ECS task가 DB_PASSWORD로 읽을 app DB password secret ARN이다.
 output "db_app_password_secret_arn" {
+  value     = aws_secretsmanager_secret.db_password.arn
+  sensitive = true
+}
+
+output "db_app_credentials_secret_arn" {
   value     = aws_secretsmanager_secret.db_password.arn
   sensitive = true
 }

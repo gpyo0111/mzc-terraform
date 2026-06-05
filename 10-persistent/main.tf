@@ -29,13 +29,16 @@ resource "aws_s3_bucket_public_access_block" "model" {
   restrict_public_buckets = true
 }
 
-# 버킷 데이터를 기본적으로 AES256으로 암호화한다.
+# 버킷 데이터를 현재 AWS 설정과 동일하게 KMS로 암호화한다.
 resource "aws_s3_bucket_server_side_encryption_configuration" "model" {
   bucket = aws_s3_bucket.model.id
 
   rule {
+    bucket_key_enabled = false
+
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = "arn:aws:kms:ap-northeast-2:455535733131:key/5b711458-5f36-427f-b4a7-0daa1b81a0b1"
+      sse_algorithm     = "aws:kms"
     }
   }
 }
@@ -72,6 +75,14 @@ resource "aws_security_group" "rds" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.db_admin.id]
+  }
+
+  ingress {
+    description     = "Allow MySQL from RDS Proxy"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds_proxy.id]
   }
 
   egress {

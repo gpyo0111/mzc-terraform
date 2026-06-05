@@ -59,7 +59,7 @@ PY
 )"
 
 set +e
-APP_PASSWORD="$(aws secretsmanager get-secret-value \
+APP_SECRET_STRING="$(aws secretsmanager get-secret-value \
   --region "$AWS_REGION" \
   --secret-id "$APP_SECRET_ARN" \
   --query SecretString \
@@ -67,7 +67,7 @@ APP_PASSWORD="$(aws secretsmanager get-secret-value \
 APP_SECRET_STATUS="$?"
 set -e
 
-if [ "$APP_SECRET_STATUS" -ne 0 ] || [ -z "$APP_PASSWORD" ] || [ "$APP_PASSWORD" = "None" ] || [ "$ROTATE_APP_PASSWORD" = "--rotate" ]; then
+if [ "$APP_SECRET_STATUS" -ne 0 ] || [ -z "$APP_SECRET_STRING" ] || [ "$APP_SECRET_STRING" = "None" ] || [ "$ROTATE_APP_PASSWORD" = "--rotate" ]; then
   APP_PASSWORD="$(aws secretsmanager get-random-password \
     --region "$AWS_REGION" \
     --password-length 32 \
@@ -76,15 +76,43 @@ if [ "$APP_SECRET_STATUS" -ne 0 ] || [ -z "$APP_PASSWORD" ] || [ "$APP_PASSWORD"
     --query RandomPassword \
     --output text)"
 
-  aws secretsmanager put-secret-value \
-    --region "$AWS_REGION" \
-    --secret-id "$APP_SECRET_ARN" \
-    --secret-string "$APP_PASSWORD" >/dev/null
-
-  echo "Stored a new app DB password in Secrets Manager."
+  echo "Generated a new app DB password."
 else
+  APP_PASSWORD="$(APP_SECRET_STRING="$APP_SECRET_STRING" python3 - <<'PY'
+import json
+import os
+
+value = os.environ["APP_SECRET_STRING"]
+try:
+    parsed = json.loads(value)
+    if isinstance(parsed, dict) and "password" in parsed:
+        print(parsed["password"])
+    else:
+        print(value)
+except json.JSONDecodeError:
+    print(value)
+PY
+)"
   echo "Using existing app DB password from Secrets Manager."
 fi
+
+APP_SECRET_JSON="$(APP_USERNAME="$APP_USERNAME" APP_PASSWORD="$APP_PASSWORD" python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "username": os.environ["APP_USERNAME"],
+    "password": os.environ["APP_PASSWORD"],
+}, separators=(",", ":")))
+PY
+)"
+
+aws secretsmanager put-secret-value \
+  --region "$AWS_REGION" \
+  --secret-id "$APP_SECRET_ARN" \
+  --secret-string "$APP_SECRET_JSON" >/dev/null
+
+echo "Stored app DB credentials JSON in Secrets Manager."
 
 MYSQL_PWD="$MASTER_PASSWORD" "$MYSQL_BIN" \
   --host="$DB_ENDPOINT" \

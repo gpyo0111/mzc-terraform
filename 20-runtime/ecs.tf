@@ -63,9 +63,8 @@ resource "aws_ecs_task_definition" "api" {
         { name = "PAID_QUEUE_URL", value = aws_sqs_queue.paid.url },
 
         # API 컨테이너가 사용할 DB 접속 정보다. 10-persistent remote state output에서 읽는다.
-        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_endpoint },
+        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_proxy_endpoint },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = data.terraform_remote_state.persistent.outputs.db_app_username },
         { name = "DB_NAME", value = data.terraform_remote_state.persistent.outputs.db_name },
 
         { name = "JWT_ALGORITHM", value = "HS256" },
@@ -75,8 +74,12 @@ resource "aws_ecs_task_definition" "api" {
       secrets = [
         {
           # app DB 계정 비밀번호를 Secrets Manager에서 읽어 컨테이너 환경변수로 전달한다.
+          name      = "DB_USER"
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = data.terraform_remote_state.persistent.outputs.db_app_password_secret_arn
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:password::"
         },
         {
           name      = "JWT_SECRET_KEY"
@@ -163,17 +166,20 @@ resource "aws_ecs_task_definition" "free_worker" {
         { name = "TEST_MODE", value = "4s" },
 
         # free worker 컨테이너가 사용할 DB 접속 정보다. 10-persistent remote state output에서 읽는다.
-        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_endpoint },
+        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_proxy_endpoint },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = data.terraform_remote_state.persistent.outputs.db_app_username },
         { name = "DB_NAME", value = data.terraform_remote_state.persistent.outputs.db_name }
       ]
 
       secrets = [
         {
           # app DB 계정 비밀번호를 Secrets Manager에서 읽어 컨테이너 환경변수로 전달한다.
+          name      = "DB_USER"
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = data.terraform_remote_state.persistent.outputs.db_app_password_secret_arn
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:password::"
         }
       ]
 
@@ -246,17 +252,20 @@ resource "aws_ecs_task_definition" "paid_worker" {
         { name = "TEST_MODE", value = "4s" },
 
         # paid worker 컨테이너가 사용할 DB 접속 정보다. 10-persistent remote state output에서 읽는다.
-        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_endpoint },
+        { name = "DB_HOST", value = data.terraform_remote_state.persistent.outputs.rds_proxy_endpoint },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = data.terraform_remote_state.persistent.outputs.db_app_username },
         { name = "DB_NAME", value = data.terraform_remote_state.persistent.outputs.db_name }
       ]
 
       secrets = [
         {
           # app DB 계정 비밀번호를 Secrets Manager에서 읽어 컨테이너 환경변수로 전달한다.
+          name      = "DB_USER"
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = data.terraform_remote_state.persistent.outputs.db_app_password_secret_arn
+          valueFrom = "${data.terraform_remote_state.persistent.outputs.db_app_credentials_secret_arn}:password::"
         }
       ]
 
