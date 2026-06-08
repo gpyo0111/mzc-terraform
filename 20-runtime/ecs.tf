@@ -119,6 +119,10 @@ resource "aws_ecs_service" "api" {
     aws_lb_listener_rule.api
   ]
 
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   tags = local.common_tags
 }
 
@@ -200,6 +204,10 @@ resource "aws_ecs_service" "free_worker" {
     assign_public_ip = false
   }
 
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   tags = local.common_tags
 }
 
@@ -279,6 +287,10 @@ resource "aws_ecs_service" "paid_worker" {
     subnets          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 
   tags = local.common_tags
