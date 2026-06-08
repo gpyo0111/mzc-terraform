@@ -6,6 +6,6 @@ output "verified_kms_master_key_arn" {
   description = "S3 버킷 정적 암호화 및 타 가드레일 컴포넌트에 주입할 마스터 키 고유 ARN 주소"
 }
 
-# output "test" {
-#  value = aws_vpc.main.id
-# }
+output "test" {
+ value = data.aws_lb.target_alb.arn
+}

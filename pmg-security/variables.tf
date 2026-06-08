@@ -62,3 +62,12 @@ variable "vpc_id" {
   type    = string
   default = "vpc-09a927181645cd53c"
 }
+
+variable "alb" {
+  type    = string
+  default = "securevoice-dev-api-alb"
+}
+
+data "aws_lb" "target_alb" {
+  name = "securevoice-dev-api-alb"
+}
