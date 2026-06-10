@@ -28,8 +28,8 @@ data "aws_security_group" "vpce" {
 # =========================================================================
 resource "aws_security_group_rule" "ecs_to_rds_ingress" {
   type                     = "ingress"
-  from_port                = 5432 # 데이터베이스 포트 (PostgreSQL: 5432 / MySQL: 3306)
-  to_port                  = 5432
+  from_port                = 3306 # 데이터베이스 포트 (PostgreSQL: 5432 / MySQL: 3306)
+  to_port                  = 3306
   protocol                 = "tcp"
   
   # 규칙이 박힐 대상: 검색해 온 RDS 보안 그룹 ID
