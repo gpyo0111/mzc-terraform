@@ -36,7 +36,7 @@ resource "aws_ecs_task_definition" "api" {
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn      = aws_iam_role.api_task.arn
 
-  container_definitions = jsonencode([
+    container_definitions = jsonencode([
     {
       name      = "api"
       image     = local.api_image
@@ -64,17 +64,22 @@ resource "aws_ecs_task_definition" "api" {
 
         { name = "DB_HOST", value = var.db_host },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = var.db_user },
         { name = "DB_NAME", value = var.db_name },
 
         { name = "JWT_ALGORITHM", value = "HS256" },
-        { name = "JWT_ACCESS_TOKEN_EXPIRE_MINUTES", value = "60" }
+        { name = "JWT_ACCESS_TOKEN_EXPIRE_MINUTES", value = "60" },
+
+        { name = "METRICS_ENABLED", value = "true" }
       ]
 
       secrets = [
         {
+          name      = "DB_USER"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = var.db_password_secret_arn
+          valueFrom = "${var.db_password_secret_arn}:password::"
         },
         {
           name      = "JWT_SECRET_KEY"
@@ -88,6 +93,27 @@ resource "aws_ecs_task_definition" "api" {
           awslogs-group         = aws_cloudwatch_log_group.api.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "api"
+        }
+      }
+    },
+    {
+      name      = "adot-collector"
+      image     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+      essential = false
+
+      secrets = [
+        {
+          name      = "AOT_CONFIG_CONTENT"
+          valueFrom = data.aws_ssm_parameter.api_adot_config.arn
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.api.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "adot"
         }
       }
     }
@@ -119,6 +145,10 @@ resource "aws_ecs_service" "api" {
     aws_lb_listener_rule.api
   ]
 
+  lifecycle {
+      ignore_changes = [task_definition]
+  }
+
   tags = local.common_tags
 }
 
@@ -133,7 +163,7 @@ resource "aws_ecs_task_definition" "free_worker" {
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn      = aws_iam_role.worker_task.arn
 
-  container_definitions = jsonencode([
+    container_definitions = jsonencode([
     {
       name      = "free-worker"
       image     = local.worker_image
@@ -162,14 +192,20 @@ resource "aws_ecs_task_definition" "free_worker" {
 
         { name = "DB_HOST", value = var.db_host },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = var.db_user },
-        { name = "DB_NAME", value = var.db_name }
+        { name = "DB_NAME", value = var.db_name },
+
+        { name = "METRICS_ENABLED", value = "true" },
+        { name = "METRICS_PORT", value = "9100" }
       ]
 
       secrets = [
         {
+          name      = "DB_USER"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = var.db_password_secret_arn
+          valueFrom = "${var.db_password_secret_arn}:password::"
         }
       ]
 
@@ -179,6 +215,27 @@ resource "aws_ecs_task_definition" "free_worker" {
           awslogs-group         = aws_cloudwatch_log_group.free_worker.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "free-worker"
+        }
+      }
+    },
+    {
+      name      = "adot-collector"
+      image     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+      essential = false
+
+      secrets = [
+        {
+          name      = "AOT_CONFIG_CONTENT"
+          valueFrom = data.aws_ssm_parameter.free_worker_adot_config.arn
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.free_worker.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "adot"
         }
       }
     }
@@ -200,6 +257,10 @@ resource "aws_ecs_service" "free_worker" {
     assign_public_ip = false
   }
 
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   tags = local.common_tags
 }
 
@@ -214,7 +275,7 @@ resource "aws_ecs_task_definition" "paid_worker" {
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn      = aws_iam_role.worker_task.arn
 
-  container_definitions = jsonencode([
+    container_definitions = jsonencode([
     {
       name      = "paid-worker"
       image     = local.worker_image
@@ -243,14 +304,20 @@ resource "aws_ecs_task_definition" "paid_worker" {
 
         { name = "DB_HOST", value = var.db_host },
         { name = "DB_PORT", value = "3306" },
-        { name = "DB_USER", value = var.db_user },
-        { name = "DB_NAME", value = var.db_name }
+        { name = "DB_NAME", value = var.db_name },
+
+        { name = "METRICS_ENABLED", value = "true" },
+        { name = "METRICS_PORT", value = "9100" }
       ]
 
       secrets = [
         {
+          name      = "DB_USER"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
           name      = "DB_PASSWORD"
-          valueFrom = var.db_password_secret_arn
+          valueFrom = "${var.db_password_secret_arn}:password::"
         }
       ]
 
@@ -260,6 +327,27 @@ resource "aws_ecs_task_definition" "paid_worker" {
           awslogs-group         = aws_cloudwatch_log_group.paid_worker.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "paid-worker"
+        }
+      }
+    },
+    {
+      name      = "adot-collector"
+      image     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+      essential = false
+
+      secrets = [
+        {
+          name      = "AOT_CONFIG_CONTENT"
+          valueFrom = data.aws_ssm_parameter.paid_worker_adot_config.arn
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.paid_worker.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "adot"
         }
       }
     }
@@ -279,6 +367,10 @@ resource "aws_ecs_service" "paid_worker" {
     subnets          = data.terraform_remote_state.network.outputs.private_app_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 
   tags = local.common_tags

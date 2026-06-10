@@ -149,6 +149,18 @@ resource "aws_iam_policy" "worker_task" {
           aws_sqs_queue.free.arn,
           aws_sqs_queue.paid.arn
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "cloudwatch:namespace" = "SecureVoice/Worker"
+          }
+        }
       }
     ]
   })

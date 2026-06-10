@@ -1,0 +1,45 @@
+extensions:
+  sigv4auth:
+    region: ${aws_region}
+    service: aps
+
+receivers:
+  prometheus:
+    config:
+      global:
+        scrape_interval: ${scrape_interval}
+        scrape_timeout: 10s
+      scrape_configs:
+        - job_name: ${scrape_job_name}
+          metrics_path: ${metrics_path}
+          static_configs:
+            - targets:
+                - ${scrape_target}
+              labels:
+                project: ${project}
+                env: ${env}
+                service: ${service_name}
+                queue_type: ${queue_type}
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 8192
+
+exporters:
+  prometheusremotewrite:
+    endpoint: ${amp_remote_write_url}
+    auth:
+      authenticator: sigv4auth
+
+service:
+  extensions:
+    - sigv4auth
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+      processors:
+        - batch
+      exporters:
+        - prometheusremotewrite
