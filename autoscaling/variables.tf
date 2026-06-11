@@ -22,3 +22,8 @@ variable "paid_queue_name" {
   type    = string
   default = "paid-queue"
 }
+
+variable "aiops_alerts_sns_topic_arn" {
+  type        = string
+  default     = "arn:aws:sns:ap-northeast-2:455535733131:securevoice-dev-aiops-alerts"
+}

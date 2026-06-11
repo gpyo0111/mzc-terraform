@@ -90,7 +90,8 @@ resource "aws_cloudwatch_metric_alarm" "free_queue_visible_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -110,7 +111,8 @@ resource "aws_cloudwatch_metric_alarm" "paid_queue_visible_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -211,7 +213,8 @@ resource "aws_cloudwatch_metric_alarm" "free_worker_memory_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -232,7 +235,8 @@ resource "aws_cloudwatch_metric_alarm" "paid_worker_memory_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -253,7 +257,8 @@ resource "aws_cloudwatch_metric_alarm" "free_queue_processing_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -274,7 +279,8 @@ resource "aws_cloudwatch_metric_alarm" "paid_queue_processing_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -295,7 +301,8 @@ resource "aws_cloudwatch_metric_alarm" "free_inference_latency_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.free_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
 
@@ -316,6 +323,7 @@ resource "aws_cloudwatch_metric_alarm" "paid_inference_latency_high" {
   }
 
   alarm_actions = [
-    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn
+    aws_appautoscaling_policy.paid_worker_sqs_scale_out.arn,
+    var.aiops_alerts_sns_topic_arn
   ]
 }
