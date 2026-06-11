@@ -62,21 +62,21 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
   "metadata": {
     "name": "securevoice-worker-overview",
     "namespace": "default",
-    "uid": "fd177781-4d32-4a10-80ad-58dde41d4beb",
-    "resourceVersion": "1781058652951982",
+    "uid": "e627b27b-2397-4512-97d4-4e2094ed9ce9",
+    "resourceVersion": "1781061181992982",
     "generation": 1,
-    "creationTimestamp": "2026-06-10T02:30:52Z",
+    "creationTimestamp": "2026-06-10T03:13:01Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "1887113415303168"
+      "grafana.app/deprecatedInternalID": "1897720954662912"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
       "grafana.app/folder": "efogzkrmnx6v4a",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerId": "SecureVoice",
-      "grafana.app/sourceChecksum": "4572723a1b43375832b6be16c9087569",
+      "grafana.app/sourceChecksum": "489738233576d2e24184f77233a09bad",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/securevoice-worker-overview.json",
-      "grafana.app/sourceTimestamp": "1781058647000",
+      "grafana.app/sourceTimestamp": "1781061176000",
       "grafana.app/folderTitle": "SecureVoice",
       "grafana.app/folderUrl": "/dashboards/f/efogzkrmnx6v4a/securevoice"
     }
@@ -1023,15 +1023,59 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(securevoice_inference_requests_total) by (exported_queue_type, user_type, plan)",
+                        "expr": "sum(increase(securevoice_inference_requests_total{user_type=\"guest\", plan=\"free\"}[$__range])) or on() vector(0)",
                         "instant": false,
                         "interval": "",
-                        "legendFormat": "{{queue_type}} / {{user_type}} / {{plan}}",
+                        "legendFormat": "guest",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_requests_total{user_type=\"free\", plan=\"free\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "free",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_success_total{user_type=\"paid\", plan=\"paid\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "paid",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "C"
                   }
                 }
               ],
@@ -1052,6 +1096,7 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                   "color": {
                     "mode": "thresholds"
                   },
+                  "decimals": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -1110,14 +1155,58 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(securevoice_inference_success_total) by (exported_queue_type, user_type, plan)",
+                        "expr": "sum(increase(securevoice_inference_success_total{user_type=\"guest\", plan=\"free\"}[$__range])) or on() vector(0)",
                         "instant": false,
-                        "legendFormat": "{{queue_type}} / {{user_type}} / {{plan}}",
+                        "legendFormat": "guest",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_success_total{user_type=\"free\", plan=\"free\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "free",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_success_total{user_type=\"paid\", plan=\"paid\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "paid",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "C"
                   }
                 }
               ],
@@ -1135,6 +1224,7 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
             "spec": {
               "fieldConfig": {
                 "defaults": {
+                  "decimals": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -1193,14 +1283,58 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(securevoice_inference_failed_total) by (exported_queue_type)",
+                        "expr": "sum(increase(securevoice_inference_failed_total{user_type=\"guest\", plan=\"free\"}[$__range])) or on() vector(0)",
                         "instant": false,
-                        "legendFormat": "__auto",
+                        "legendFormat": "guest",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_failed_total{user_type=\"free\", plan=\"free\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "free",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(securevoice_inference_failed_total{user_type=\"paid\", plan=\"paid\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "paid",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "C"
                   }
                 }
               ],
@@ -1221,6 +1355,7 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                   "color": {
                     "mode": "thresholds"
                   },
+                  "decimals": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -1612,14 +1747,36 @@ cat > /opt/grafana/dashboards/securevoice-worker-overview.json <<'EOF'
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(securevoice_worker_queue_processing_seconds_count) by (exported_queue_type, user_type, plan)",
+                        "expr": "sum(max_over_time(securevoice_worker_sqs_messages_received_total{queue_type=\"free\"}[$__range])) or on() vector(0)",
                         "instant": false,
-                        "legendFormat": "{{queue_type}}",
+                        "legendFormat": "free-queue",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "amp-securevoice"
+                      },
+                      "group": "grafana-amazonprometheus-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(max_over_time(securevoice_worker_sqs_messages_received_total{queue_type=\"paid\"}[$__range])) or on() vector(0)",
+                        "instant": false,
+                        "legendFormat": "paid-queue",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
                   }
                 }
               ],

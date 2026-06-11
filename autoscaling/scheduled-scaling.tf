@@ -5,7 +5,7 @@ resource "aws_appautoscaling_scheduled_action" "business_hours_warm_start" {
   scalable_dimension = aws_appautoscaling_target.free_worker.scalable_dimension
 
   # KST weekday 09:00 = UTC 00:00
-  schedule = "cron(35 1 ? * MON-FRI *)"
+  schedule = "cron(10 6 ? * MON-FRI *)"
 
   scalable_target_action {
     min_capacity = 2
@@ -20,7 +20,7 @@ resource "aws_appautoscaling_scheduled_action" "business_hours_warm_start_paid" 
   scalable_dimension = aws_appautoscaling_target.paid_worker.scalable_dimension
 
   # KST weekday 09:00 = UTC 00:00
-  schedule = "cron(35 1 ? * MON-FRI *)"
+  schedule = "cron(10 6 ? * MON-FRI *)"
 
   scalable_target_action {
     min_capacity = 5
