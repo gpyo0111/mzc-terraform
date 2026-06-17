@@ -1,0 +1,14 @@
+[
+    {
+        "Name": "securevoice-paid-inference-latency-high",
+        "State": "OK",
+        "Reason": "Threshold Crossed: 1 datapoint was received for 2 periods and 1 missing datapoint was treated as [NonBreaching].",
+        "Updated": "2026-06-12T06:58:08.029000+00:00"
+    },
+    {
+        "Name": "securevoice-paid-queue-processing-high",
+        "State": "ALARM",
+        "Reason": "Threshold Crossed: 2 datapoints [10.0 (16/06/26 00:34:00), 10.0 (16/06/26 00:33:00)] were greater than or equal to the threshold (8.0).",
+        "Updated": "2026-06-16T00:38:00.815000+00:00"
+    }
+]

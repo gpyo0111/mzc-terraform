@@ -230,12 +230,20 @@ def generate_bedrock_summary(context_data: dict) -> str:
 너는 AWS ECS 기반 AI inference 서비스의 AIOps 운영 보조자다.
 아래 장애 이벤트와 운영 지표를 기반으로 Slack에 보낼 한국어 장애 요약을 작성하라.
 
+출력 형식:
+*SecureVoice AI Summary*
+*요약:* 한 문장
+*영향:* 한 문장
+*근거:* 한 문장
+*조치:* 한 문장
+
 조건:
-- 5~7줄로 작성
+- Slack mrkdwn 형식 사용
+- 굵게는 * 하나만 사용
+- ** 사용 금지
+- Runbook 줄은 작성하지 말 것
 - 관측된 사실과 추정 원인을 구분
-- 영향 범위, 근거, 권장 조치, Runbook 포함
-- Markdown 형식
-- 제목은 '*SecureVoice AI Summary*'
+- 테스트 경보면 테스트 경보라고 명시
 
 장애 컨텍스트:
 {json.dumps(context_data, ensure_ascii=False, default=str)}
@@ -250,14 +258,29 @@ def generate_bedrock_summary(context_data: dict) -> str:
             }
         ],
         inferenceConfig={
-        "maxTokens": 180,
-        "temperature": 0.1,
-        "topP": 0.8,
+            "maxTokens": 300,
+            "temperature": 0.1,
+            "topP": 0.8,
         },
     )
 
-    return response["output"]["message"]["content"][0]["text"]
+    text = response["output"]["message"]["content"][0]["text"]
+    return normalize_slack_summary(text, context_data["runbook_url"])
 
+def normalize_slack_summary(text: str, runbook_url: str) -> str:
+    text = text.replace("**", "*").strip()
+
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if "Runbook" in stripped or "런북" in stripped:
+            continue
+        lines.append(stripped)
+
+    lines.append(f"*Runbook:* <{runbook_url}|조치 가이드>")
+    return "\n".join(lines)
 
 def build_fallback_summary(context_data: dict) -> str:
     ecs_state = context_data["ecs_state"]
@@ -276,7 +299,7 @@ def build_fallback_summary(context_data: dict) -> str:
 - QueueProcessing avg/max: `{context_data["queue_processing"]["average"]}/{context_data["queue_processing"]["maximum"]}`
 - InferenceLatency avg/max: `{context_data["inference_latency"]["average"]}/{context_data["inference_latency"]["maximum"]}`
 - 최근 ERROR 로그: {error_text}
-- Runbook: {context_data["runbook_url"]}
+- Runbook: <{context_data["runbook_url"]}|조치 가이드>
 """.strip()
 
 
