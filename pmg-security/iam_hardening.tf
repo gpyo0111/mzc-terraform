@@ -25,7 +25,7 @@ resource "aws_iam_policy" "ecs_s3_list_hardening" {
           "s3:ListBucket"
         ]
         Resource = [
-          data.aws_s3_bucket.audio.arn,  # s3_security.tf에 이미 선언된 데이터 소스를 재사용합니다.
+          data.aws_s3_bucket.audio.arn, # s3_security.tf에 이미 선언된 데이터 소스를 재사용합니다.
           data.aws_s3_bucket.model.arn
         ]
       }

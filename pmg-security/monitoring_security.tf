@@ -26,6 +26,18 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail_logs" {
   restrict_public_buckets = true
 }
 
+# [비용 최적화] CloudTrail 로그를 30일 후 자동 삭제하여 보관 비용 폭증을 방지합니다.
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  rule {
+    id     = "expire-cloudtrail-logs-30d"
+    status = "Enabled"
+    filter {} # 버킷 내 전체 객체에 적용
+    expiration { days = 30 }
+  }
+}
+
 # AWS 감사 카메라(CloudTrail)가 이 S3 상자에 로그를 넣을 수 있도록 통로를 열어주는 문지기 정책
 resource "aws_s3_bucket_policy" "cloudtrail_logs_policy" {
   bucket = aws_s3_bucket.cloudtrail_logs.id
@@ -74,60 +86,98 @@ resource "aws_cloudtrail" "main" {
 }
 
 # -------------------------------------------------------------------------
-# 3. VPC 플로우 로그(차량 번호판 장부)를 적어둘 CloudWatch 로그 보관소 생성
+# 3. VPC 플로우 로그(차량 번호판 장부) 전용 S3 버킷 생성
+#    [설계 변경] CloudWatch Logs 대신 S3에 적재 → 비용 절감 + Athena 분석 통일.
+#    (GuardDuty는 VPC Flow Log를 자체 피드로 직접 읽으므로 탐지에는 영향 없음)
 # -------------------------------------------------------------------------
-resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
-  name              = "/aws/vpc/${var.project_name}-${var.env}-flow-logs"
-  retention_in_days = 30 # [비용 최적화] 민규 님이 지정하신 30일 자동 파쇄 타이머 작동
+resource "aws_s3_bucket" "vpc_flow_logs" {
+  bucket        = "${var.project_name}-${var.env}-vpc-flow-logs-${var.account_id}"
+  force_destroy = true # 프로젝트 실습 종료 후 버킷이 깔끔하게 지워지도록 설정
+
+  tags = {
+    Name        = "${var.project_name}-${var.env}-vpc-flow-logs"
+    Environment = var.env
+    ManagedBy   = "terraform"
+  }
 }
 
-# -------------------------------------------------------------------------
-# 4. 마당 입구에서 번호판을 적어 보관소에 전달할 비서(IAM Role) 임명
-# -------------------------------------------------------------------------
-resource "aws_iam_role" "vpc_flow_logs" {
-  name = "${var.project_name}-${var.env}-vpc-flow-logs-role"
+# 퍼블릭 액세스 전면 차단 가드레일
+resource "aws_s3_bucket_public_access_block" "vpc_flow_logs" {
+  bucket = aws_s3_bucket.vpc_flow_logs.id
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "vpc-flow-logs.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
-resource "aws_iam_role_policy" "vpc_flow_logs" {
-  name = "${var.project_name}-${var.env}-vpc-flow-logs-policy"
-  role = aws_iam_role.vpc_flow_logs.id
+# [비용 최적화] flow log를 30일 후 자동 삭제
+resource "aws_s3_bucket_lifecycle_configuration" "vpc_flow_logs" {
+  bucket = aws_s3_bucket.vpc_flow_logs.id
+
+  rule {
+    id     = "expire-vpc-flow-logs-30d"
+    status = "Enabled"
+    filter {}
+    expiration { days = 30 }
+  }
+}
+
+# AWS 로그 전송 서비스(delivery.logs.amazonaws.com)가 이 버킷에 flow log를 쓸 수 있도록 허용하는 정책
+resource "aws_s3_bucket_policy" "vpc_flow_logs" {
+  bucket = aws_s3_bucket.vpc_flow_logs.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "AWSLogDeliveryAclCheck"
         Effect = "Allow"
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
-        ]
-        Resource = "*"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action   = ["s3:GetBucketAcl", "s3:ListBucket"]
+        Resource = aws_s3_bucket.vpc_flow_logs.arn
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = var.account_id }
+          ArnLike      = { "aws:SourceArn" = "arn:aws:logs:${var.aws_region}:${var.account_id}:*" }
+        }
+      },
+      {
+        Sid    = "AWSLogDeliveryWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.vpc_flow_logs.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "aws:SourceAccount" = var.account_id
+          }
+          ArnLike = { "aws:SourceArn" = "arn:aws:logs:${var.aws_region}:${var.account_id}:*" }
+        }
       }
     ]
   })
 }
 
 # -------------------------------------------------------------------------
-# 5. VPC 플로우 로그(VPC Flow Logs) 최종 가동 및 리모트 스테이트 결합
+# 4. VPC 플로우 로그 최종 가동 (S3 대상, Athena 비용 최적화 옵션 포함)
 # -------------------------------------------------------------------------
 resource "aws_flow_log" "main" {
-  iam_role_arn    = aws_iam_role.vpc_flow_logs.arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
-  traffic_type    = "ALL" # 들어오고 나가는 모든 네트워크 번호판 강제 기록
-  vpc_id          = var.vpc_id  # 상위 네트워크 장부 자동 결합
+  log_destination_type = "s3"
+  log_destination      = aws_s3_bucket.vpc_flow_logs.arn
+  traffic_type         = "ALL"      # 들어오고 나가는 모든 네트워크 번호판 강제 기록
+  vpc_id               = var.vpc_id # 상위 네트워크 장부 자동 결합
+
+  # Athena 쿼리 비용/성능 최적화: parquet 포맷 + Hive 호환 시간 파티션
+  destination_options {
+    file_format                = "parquet"
+    hive_compatible_partitions = true
+    per_hour_partition         = true
+  }
+
+  depends_on = [aws_s3_bucket_policy.vpc_flow_logs]
 }

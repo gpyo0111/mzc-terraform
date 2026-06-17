@@ -27,48 +27,59 @@ data "aws_security_group" "vpce" {
 # 1. [ECS -> RDS 체이닝] RDS 보안 그룹에 ECS 서브넷 인입만 허용
 # =========================================================================
 resource "aws_security_group_rule" "ecs_to_rds_ingress" {
-  type                     = "ingress"
-  from_port                = 3306 # 데이터베이스 포트 (PostgreSQL: 5432 / MySQL: 3306)
-  to_port                  = 3306
-  protocol                 = "tcp"
-  
+  type      = "ingress"
+  from_port = 3306 # 데이터베이스 포트 (PostgreSQL: 5432 / MySQL: 3306)
+  to_port   = 3306
+  protocol  = "tcp"
+
   # 규칙이 박힐 대상: 검색해 온 RDS 보안 그룹 ID
-  security_group_id        = data.aws_security_group.rds.id
-  
+  security_group_id = data.aws_security_group.rds.id
+
   # 허용할 신분증 소스: 검색해 온 ECS 보안 그룹 ID
   source_security_group_id = data.aws_security_group.ecs.id
-  
-  description              = "Allow database traffic strictly from ECS tasks"
+
+  description = "Allow database traffic strictly from ECS tasks"
 }
 
 # =========================================================================
-# 2. [ALB 보안 하드닝] 최전방 정문에 HTTPS(443) 암호화 통로 개방
+# [Tuning] 1. AWS 글로벌 인프라에서 관리하는 CloudFront 오리진 직면 Prefix List 룩업
+# =========================================================================
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
+# =========================================================================
+# [Tuning] 2. [ALB 보안 하드닝] 외부 전체 개방(0.0.0.0/0)을 차단하고 
+#              오직 CloudFront 에지 서버만 HTTPS 진입이 가능하도록 방화벽 락(Lock) 주입
 # =========================================================================
 resource "aws_security_group_rule" "alb_https_ingress" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  
-  # 규칙이 박힐 대상: 검색해 온 ALB 보안 그룹 ID
+  type      = "ingress"
+  from_port = 443
+  to_port   = 443
+  protocol  = "tcp"
+
+  # 규칙이 박힐 대상: 검색해 온 ALB 보안 그룹 ID 
   security_group_id = data.aws_security_group.alb.id
-  cidr_blocks       = ["0.0.0.0/0"]
-  
-  description       = "Allow HTTPS encrypted traffic from internet"
+
+  # [리팩토링 핵심]: 기존 무차별 cidr_blocks = ["0.0.0.0/0"] 구문을 완전히 폐기하고
+  # 위에서 레이더로 추적한 AWS 공식 CloudFront IP 프리픽스 리스트 ID로 대체 바인딩합니다.
+  prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+
+  description = "Enforce inbound HTTPS traffic strictly from verified CloudFront Edge servers to prevent Origin Bypass"
 }
 
 # =========================================================================
 # 3. [VPC 엔드포인트 통제] 사설 엔드포인트를 VPC 내부 대역(10.0.0.0/22)으로 제한
 # =========================================================================
 resource "aws_security_group_rule" "vpc_endpoint_private_ingress" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  
+  type      = "ingress"
+  from_port = 443
+  to_port   = 443
+  protocol  = "tcp"
+
   # 규칙이 박힐 대상: 검색해 온 VPCE 보안 그룹 ID
   security_group_id = data.aws_security_group.vpce.id
   cidr_blocks       = ["10.0.0.0/22"] # 아키텍처 상의 전체 VPC 대역 할당
-  
-  description       = "Restrict VPC Endpoint access strictly to internal VPC CIDR block"
+
+  description = "Restrict VPC Endpoint access strictly to internal VPC CIDR block"
 }

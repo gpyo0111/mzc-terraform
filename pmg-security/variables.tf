@@ -68,6 +68,11 @@ variable "alb" {
   default = "securevoice-dev-api-alb"
 }
 
-data "aws_lb" "target_alb" {
-  name = "securevoice-dev-api-alb"
+# =========================================================================
+# 보안 경보(SNS) 수신 이메일 — 담당자 변경 시 이 값만 수정하면 됨
+# =========================================================================
+variable "security_alert_email" {
+  type        = string
+  default     = "tkfkaksek7@gmail.com"
+  description = "WAF/보안 경보를 받을 담당자 이메일 주소 (변경 시 AWS가 보낸 구독 확인 메일에서 Confirm 필요)"
 }

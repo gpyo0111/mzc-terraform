@@ -148,6 +148,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "audio_encryption"
       kms_master_key_id = aws_kms_key.securevoice_master.arn
       sse_algorithm     = "aws:kms"
     }
+    # [비용 최적화] S3 Bucket Key 사용: 객체마다 KMS를 호출하지 않고 데이터키를 캐싱·재사용해
+    # KMS API 호출(및 비용)을 대폭 절감합니다. 보안 수준은 동일.
+    bucket_key_enabled = true
   }
 }
 
@@ -160,6 +163,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "model_encryption"
       kms_master_key_id = aws_kms_key.securevoice_master.arn
       sse_algorithm     = "aws:kms"
     }
+    bucket_key_enabled = true
   }
 }
 
@@ -174,11 +178,11 @@ data "aws_cloudfront_distribution" "cf" {
 # [OAC 하드닝] 2. 최신 서명 기술(SigV4)이 탑재된 글로벌 OAC 컨트롤러 허브 생성
 # =========================================================================
 resource "aws_cloudfront_origin_access_control" "oac" {
-  name                              = "${var.project_name}-${var.env}-s3-oac" # AWS 관리 창에 표시될 OAC 자원의 고유 식별 명칭입니다.
+  name                              = "${var.project_name}-${var.env}-s3-oac"                  # AWS 관리 창에 표시될 OAC 자원의 고유 식별 명칭입니다.
   description                       = "Standard OAC supporting SSE-KMS for SecureVoice Dev S3" # 해당 보안 자원의 구체적인 용도를 설명합니다.
-  origin_access_control_origin_type = "s3"                                   # 연동 대상 오리진 서버의 컴포넌트 규격을 S3 스토리지로 제한합니다.
-  signing_behavior                  = "always"                               # CloudFront가 S3로 데이터를 요청할 때 무조건 암호화 보안 서명을 첨부하도록 강제합니다.
-  signing_protocol                  = "sigv4"                                # AWS 최고 등급 보안 서명 연산 알고리즘인 Signature Version 4 프로토콜을 사용합니다.
+  origin_access_control_origin_type = "s3"                                                     # 연동 대상 오리진 서버의 컴포넌트 규격을 S3 스토리지로 제한합니다.
+  signing_behavior                  = "always"                                                 # CloudFront가 S3로 데이터를 요청할 때 무조건 암호화 보안 서명을 첨부하도록 강제합니다.
+  signing_protocol                  = "sigv4"                                                  # AWS 최고 등급 보안 서명 연산 알고리즘인 Signature Version 4 프로토콜을 사용합니다.
 }
 
 # =========================================================================
@@ -192,7 +196,7 @@ resource "aws_s3_bucket_policy" "audio_oac_policy" {
     Statement = [
       {
         Sid    = "AllowCloudFrontOACAccess" # 이 보안 정책 스크립트 블록의 목적을 명시하는 고유 식별자 이름입니다.
-        Effect = "Allow"                  # 아래 명시된 조건을 완벽하게 충족하는 요청에 한해 진입을 승인(Allow)합니다.
+        Effect = "Allow"                    # 아래 명시된 조건을 완벽하게 충족하는 요청에 한해 진입을 승인(Allow)합니다.
         Principal = {
           Service = "cloudfront.amazonaws.com" # 접근을 시도하는 공격 주체를 일반 익명 해커가 아닌 AWS CloudFront 핵심 서비스로만 제한합니다.
         }
@@ -205,7 +209,7 @@ resource "aws_s3_bucket_policy" "audio_oac_policy" {
         Condition = {
           ArnEquals = {
             # 초강력 가드레일: 전 세계 수많은 CloudFront 중 오직 '우리 팀의 고유 배포 ARN' 주소 도장이 찍힌 요청만 최종 통과시킵니다.
-            "aws:SourceArn" = data.aws_cloudfront_distribution.cf.arn 
+            "aws:SourceArn" = data.aws_cloudfront_distribution.cf.arn
           }
         }
       }
