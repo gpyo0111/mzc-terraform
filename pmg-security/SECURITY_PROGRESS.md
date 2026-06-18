@@ -112,6 +112,13 @@
   - 서울: 보안그룹 규칙 변경 / CloudTrail 변조 → 서울 토픽
   - CloudTrail 관리 이벤트가 EventBridge 기본 버스로 자동 전달되는 점 활용(CloudWatch 수집비 없이 동작, 저비용)
   - apply 위험: 순수 additive(규칙4+타깃4), 서비스 영향 없음. 토픽 정책은 #4에서 이미 events 발행 허용 상태.
+- **[#B 완료]** audio 버킷 `uploads/` CloudTrail Data Events (monitoring_security.tf, terraform validate 통과)
+  - `aws_cloudtrail.main`에 `event_selector` 1개 추가: `include_management_events=true`(기존 관리이벤트 동작 보존) + `data_resource`(AWS::S3::Object, `audio.arn/uploads/`), `read_write_type="All"`.
+  - **범위 결정(사용자):** 음성 원본(생체정보)이 담기는 `uploads/`에만 한정. 인식 결과 `results/`는 비용 절감 위해 제외(추후 prefix 한 줄로 확장 가능).
+  - **apply 예상:** CloudTrail **in-place 수정 1건**(event_selector 추가), 트레일 재생성 아님. 관리이벤트는 그대로 유지되어 기존 로깅 손실 없음.
+  - **apply 위험:** 순수 additive, 서비스 영향 없음. 유일한 변화는 `uploads/` 객체 Get/Put 1건당 Data Event 1건 적재(10만건당 $0.10) — prefix 한정으로 비용 통제.
+  - **콘솔 확인:** CloudTrail → 추적(Trails) → securevoice-dev-trail → 데이터 이벤트 섹션에 S3 / `.../uploads/` 항목 표시. 음성 1건 업로드/다운로드 후 cloudtrail-logs 버킷에 객체 이벤트가 남는지 확인.
+  - **[apply 확인됨]** 사용자가 정상 apply 확인 완료.
 
 ## 5. 앞으로의 작업 방식 메모
 - apply는 사용자가 직접 수행. 각 작업마다 Claude가 **plan 예상 / apply 위험 / 콘솔 확인 방법**을 함께 제공한다.
@@ -119,6 +126,31 @@
 
 ## 6. ⏯️ 현재 중단 지점 (다음 세션 여기서 이어서)
 
+> **업데이트(2026-06-18):** 아래 KMS #7 조사 내용은 **이미 완료(옵션 A 적용)** 되어 히스토리로 보존. 현재 실제 중단 지점은 맨 위 ★ 블록 참조.
+
+### ★ 다음 세션 할 일 — IAM Access Analyzer → Lambda 자동대응 (집에서 이어서)
+> 사용자 결정: 남은 작업을 **① IAM Access Analyzer → ② Lambda 자동화** 순서로 진행. 두 작업 다 **아직 코드 작성 전(미착수)**. 아래는 착수용 설계 메모.
+
+**① IAM Access Analyzer (외부 접근 분석기) — 무료·무위험, 먼저 진행**
+- 목적: 우리 S3 버킷/IAM 역할/KMS 키 등이 **외부 계정·퍼블릭에 실수로 노출**됐는지 자동·상시 탐지. (준수 축 보강)
+- 비용: **무료** (외부 분석기만 사용. 미사용권한 분석 $0.20/ID·월, 내부 분석기 $9/리소스·월 → 둘 다 **안 씀**).
+- 핵심 리소스: `aws_accessanalyzer_analyzer` (type = `ACCOUNT`). 서울 1개. (us-east-1도 무료라 원하면 별칭으로 1개 추가 가능)
+- 알림 배선(선택): 신규 finding(외부 노출 발견)을 EventBridge(`source=aws.access-analyzer`, `detail-type=Access Analyzer Finding`)로 받아 기존 서울 SNS 토픽(`security_alerts_seoul`)에 발행 → 이메일. (GuardDuty 배선과 동일 패턴 재사용)
+- 위험: **없음**(순수 additive). apply 시 분석기 1개(+규칙/타깃) 생성.
+
+**② Lambda 자동대응(self-healing) — SG 0.0.0.0/0 개방 시 자동 회수 + 알림**
+- 목적: 보안그룹에 `0.0.0.0/0` 인바운드가 열리면 **Lambda가 자동으로 해당 규칙을 회수(revoke)하고 SNS로 알림**. (대응 축 → 자동화로 승격, 필살기)
+- 트리거: 이미 `security_event_alerts.tf`에 SG 변경 EventBridge 규칙 존재 → **재사용/확장**해서 Lambda 타깃 추가 검토(중복 룰 주의).
+- 필요 리소스: Lambda 함수(python, boto3로 `revoke_security_group_ingress`) + Lambda 실행 IAM 역할(ec2 describe/revoke + logs + sns publish, **최소권한**) + EventBridge→Lambda 권한(`aws_lambda_permission`) + (기존)SNS 알림.
+- 비용: 실질 **$0** (Lambda 무료한도 내, 드문 트리거).
+- ⚠️ **위험: 중.** 잘못 짜면 **정상적인 SG 변경까지 자동 회수**해 서비스 영향 가능. → ⓐ 회수 대상을 `0.0.0.0/0` + 위험 포트(22/3306 등)로 **좁히고**, ⓑ 처음엔 **회수 없이 알림만**(dry-run) 돌려 오탐 확인 후 회수 활성화 권장. ⓒ 예외 태그(예: `AutoRemediate=false`) 설계 고려.
+- 착수 전 확인: `security_event_alerts.tf`의 기존 SG 룰과 패턴 충돌/중복 여부 점검.
+
+**③ (전체 작업 종료 후) 전체 코드 리뷰** — 사용자 요청으로 **맨 마지막**에 수행 (후보3 `audio_oac_policy` 죽은코드 제거 포함).
+
+---
+
+#### (히스토리) 작업 #7 KMS 조사 — 완료됨, 참고용
 **작업 #7 (KMS Key Policy 최소권한) 조사 중 — 가장 고위험 작업.**
 
 조사된 사실:
@@ -156,8 +188,20 @@
 1. #7 KMS 옵션 B (Enable IAM 제거 + ViaService 제한) — 비운영 테스트 후
 2. #6 WAF Count→Block 전환 (로그 관찰 후 오탐 점검)
 3. audio_oac_policy(죽은 설정) 제거 (s3_security.tf)
-4. CloudTrail 버킷 무결성/접근 추가 점검, flow log Athena 테이블 DDL 작성(발표용)
+4. ✅ flow log + CloudTrail Athena 테이블 DDL 작성(발표용) → `ATHENA_SECURITY_QUERIES.md` 완료 (2026-06-18). CloudTrail 버킷 무결성/접근 추가 점검은 미실시.
 5. 전체 코드 리뷰 + GitHub push 정리(.gitignore로 .terraform/state/*.bak 제외)
+
+**[#2회차-4 완료]** Athena 보안 조사 쿼리 문서 작성 → `ATHENA_SECURITY_QUERIES.md`
+- 실제 S3 경로 구조 확인 후 작성: Flow Logs(parquet+Hive 파티션), CloudTrail(표준 JSON/CloudTrailSerde).
+- **파티션 프로젝션** 적용 → `MSCK REPAIR`/수동 파티션 추가 불필요(자동 인식). 비용 주의: 항상 파티션 조건으로 스캔 범위 축소($5/TB).
+- 보안 쿼리 8종: REJECT 상위 출발지 / 민감포트(22,3306) / 아웃바운드 대량전송(유출) / **audio uploads/ 객체 접근(작업 B 연계)** / 루트 사용 / SG 변경 / ConsoleLogin+MFA / 사용자·IP 행동추적.
+- 위험: **없음**(Terraform/리소스 변경 아님, 순수 문서). 적용 시 Athena 콘솔에서 DDL 실행 + 워크그룹 선택만 하면 됨.
+- **[추가]** Athena 결과 전용 버킷 + 워크그룹 2개 신설 (`athena_results.tf`, terraform validate 통과)
+  - 버킷 `securevoice-dev-athena-results-455535733131`: 퍼블릭 차단 + 14일 수명주기 + force_destroy.
+  - 워크그룹 분리: `securevoice-dev-cloudtrail`→`cloudtrail/`, `securevoice-dev-flowlogs`→`flowlogs/` (결과 폴더 자동 분리). 각 워크그룹 `enforce_workgroup_configuration=true` + 결과 SSE_S3 암호화. 스캔량 상한은 옵션(주석).
+  - **이유:** 로그 원본 버킷에 조사 결과(민감)가 섞이는 문제 해소 + 결과물 위생/암호화.
+  - **apply 위험:** 순수 additive(버킷1+워크그룹2), 서비스 영향 없음.
+  - **[apply 확인됨]** 사용자가 정상 apply 완료 (5 added, 0 changed, 0 destroyed).
 
 ## 8. 추가 보강 작업 (확정, 잔여 ~10일) — 실무 평가 기반
 > 상세 평가/근거: `SECURITY_ASSESSMENT.md`. 전부 저비용·고가치만 선별.
@@ -165,11 +209,25 @@
 | # | 작업 | 위험도 | 상태 |
 |---|------|--------|------|
 | A | S3 Bucket Keys 활성화 (SSE-KMS 버킷) — KMS 호출/비용 절감 | 낮음(additive) | ✅ 완료 |
-| B | audio 버킷에만 CloudTrail Data Events — 생체정보 객체 감사 | 낮음~중 | ⬜ 대기 |
-| C | AWS Security Hub(FSBP) + Config(스코핑) — 준수 점수·통합 | 중 | ⬜ 대기 |
-| D | IAM 비밀번호 정책 + MFA 강제 | 낮음(단 MFA 강제는 팀원 영향 주의) | ⬜ 대기 |
+| B | audio 버킷 `uploads/`에만 CloudTrail Data Events — 생체정보 객체 감사 | 낮음~중 | ✅ 완료 |
+| C | AWS Security Hub(FSBP) + Config(스코핑) — 준수 점수·통합 | 중 | ❌ 의도적 제외 (아래 결정 참조) |
+| D | IAM 비밀번호 정책 + MFA 강제 | 낮음(단 MFA 강제는 팀원 영향 주의) | ⏸️ 미진행 (팀 조율 필요 — 아래 결정 참조) |
 
 > ⚠️ D의 MFA 강제: IAM 사용자가 MFA 미설정 시 잠길 수 있음 → 팀 IAM 사용자 존재 여부/조율 확인 후 진행.
+
+### 작업 D 결정 (2026-06-18): 미진행
+- **D-1 비밀번호 정책**(`aws_iam_account_password_policy`): 위험 낮음. 콘솔 비밀번호 규칙만 강제, 기존 사용자 즉시 잠금 없음. → 추후 단독 추가 가능한 안전 항목.
+- **D-2 MFA 강제**: **고위험.** MFA 미등록 사용자는 등록조차 막혀 lockout 가능. CLI 액세스 키 사용자(예: 현재 `mzc-pmg`로 Terraform 실행 중)는 정책 설계에 따라 자동화/배포까지 막힐 수 있음. 팀 공용 계정이라 단독 결정 불가.
+- **결론:** 팀 전원 MFA 등록 현황 + CLI 키 사용자 예외 처리 합의가 선행돼야 안전. 현 시점 미진행. (필요 시 D-1만 분리 적용 검토)
+
+### 작업 C 결정 (2026-06-18): 의도적 제외 + 대안 확보
+- **사전 확인:** 계정 455535733131 서울 리전에 Config 레코더 없음 / Security Hub 미구독 → 충돌 없이 켤 수는 있었음(기술적 가능). 그러나 **켜지 않기로 결정.**
+- **제외 근거:** Config/Security Hub의 핵심 가치는 **멀티계정 · 다팀의 지속적 드리프트 탐지**인데, 단일 dev 서비스에선 비용 대비 효과가 낮음. 예상 상시 비용 **월 $10~30** 대비 신규 가치는 사실상 "보안 점수 대시보드"라는 시각 자료 하나에 그침.
+- **대안(이미 확보):** ① 예방 통제는 **IaC(Terraform) 코드에 고정**(예: S3 퍼블릭 차단 `public_access_block`, SSE-KMS 암호화 강제, SG 체이닝 등 위험 설정을 코드 규칙으로 사전 차단) + 드리프트(코드와 실제의 어긋남)는 `terraform plan`으로 차이 탐지 후 `apply`로 원상복구. ② 위협 탐지는 **GuardDuty(서울+버지니아)** 가 담당. ③ 로깅/감사는 CloudTrail(멀티리전+무결성)+Flow Logs(S3/Athena).
+- **⚠️ 솔직한 한계(면접 대비):** `terraform plan`은 **사람이 직접 돌려야** 드리프트가 보임(수동·주기적). 반면 Config/Security Hub는 **24시간 자동 감시**로 어긋나는 즉시 탐지. → 정확한 포지션: "단일 서비스라 **plan 기반 수동 드리프트 점검으로 충분**하다 판단. 멀티계정·상시 자동 감시가 필요해지면 그때 Config를 도입하는 게 비용 대비 합리적." (이렇게 답하면 "plan은 자동이 아니지 않냐"는 반박을 선제 차단)
+- **일관성:** Shield Advanced·Macie·SIEM과 **동일한 "비용 대비 효과로 취사선택" 논리** → SECURITY_ASSESSMENT.md "의도적 제외" 목록에 합류.
+- **발표/면접 멘트:** "Config/Security Hub는 멀티계정 지속 준수 모니터링이 본질인데 단일 dev 서비스엔 과합니다. 예방은 IaC에 고정해 plan으로 드리프트를 잡고, 탐지는 GuardDuty로 커버했습니다. 프로덕션·멀티계정 확장 시 Security Hub를 컨트롤 타워로 도입하는 게 정석입니다."
+- **재검토 트리거:** 멀티계정(AWS Organizations) 전환 / 컴플라이언스 인증(ISMS-P, SOC2 등) 요구 발생 시 → 그때 Security Hub를 위임관리자 계정에 도입.
 
 ---
 

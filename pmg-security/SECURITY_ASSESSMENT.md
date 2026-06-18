@@ -44,6 +44,7 @@
 - "예방-탐지-대응으로 설계, 대응은 런북화 → 다음은 SSM Automation으로 자동화."
 
 ## 6. 일부러 제외 (판단력 어필) — 각 서비스 설명
+- **AWS Config + Security Hub(FSBP)**: 지속적 준수 모니터링·보안 점수 통합. **핵심 가치는 멀티계정·다팀 드리프트 탐지**인데 단일 dev 서비스엔 과함. 상시 비용 **월 $10~30** 대비 신규 가치는 "점수 대시보드" 정도. → **예방은 IaC 코드 고정+`plan`으로 드리프트 탐지, 탐지는 GuardDuty**로 대체. *단, `plan`은 수동·주기적이고 Config는 24h 자동 감시 — 단일 서비스라 수동 점검으로 충분하다 판단, 멀티계정·상시 자동화 필요 시 도입.* 멀티계정(Organizations)·컴플라이언스 인증 요구 시 위임관리자 계정에 도입이 정석. (2026-06-18 결정, 기술 검증 후 제외)
 - **Shield Advanced**: DDoS 상위 등급. L7 고급방어+24/7 대응팀+비용환급. **월 $3,000+**. → 대형 표적 서비스용, 우리는 Standard+WAF Rate-limit로 충분.
 - **Macie**: S3 민감정보(PII) 자동 스캔. **텍스트 PII 위주라 음성 바이너리엔 효과 제한 + 스캔 비용 큼.** → 프로덕션 확장 시 재검토.
 - **GuardDuty 선택 플랜**: EKS(우리 ECS라 무관)/Malware(EBS 스캔)/RDS/Lambda 보호 — 각 추가 과금. → 기본+S3로 충분.
@@ -66,12 +67,12 @@
 | **예방(Preventive)** | WAF 5룰, SG 체이닝, ALB→CloudFront Prefix List(origin bypass 차단), S3 퍼블릭차단, KMS(CMK) 암호화 + 키정책 | ✅ 완료 |
 | **탐지(Detective)** | GuardDuty(서울+버지니아), VPC Flow Logs(S3+Athena), CloudTrail(멀티리전+무결성) | ✅ 완료 |
 | **대응(Responsive)** | EventBridge 고위험 이벤트 알림(root/IAM/SG/CloudTrail), GuardDuty finding→SNS, 운영 런북 | ✅ 완료 |
-| **준수(Compliance)** | S3 Bucket Keys ✅ / Security Hub·IAM Access Analyzer·MFA강제 | 🔄 이번 주 |
+| **준수(Compliance)** | S3 Bucket Keys ✅ · audio `uploads/` 객체감사(CloudTrail Data Events) ✅ / Security Hub·Config는 의도적 제외(§6) / IAM Access Analyzer·MFA강제 | 🔄 진행 중 |
 | **자동화(Auto-Remediation)** | EventBridge→Lambda 자동 격리(필살기) | 📋 계획 |
 
 ### 남은 작업 (순서)
-- **B**: audio 버킷 CloudTrail Data Events (생체정보 객체 감사)
-- **C**: AWS Security Hub(FSBP) + Config(스코핑) — 준수 점수
+- ~~**B**: audio 버킷 CloudTrail Data Events (생체정보 객체 감사)~~ ✅ 완료 (uploads/ 한정)
+- ~~**C**: AWS Security Hub(FSBP) + Config(스코핑)~~ ❌ 의도적 제외 (§6 — 비용 대비 효과 + IaC/GuardDuty로 대체)
 - **D**: IAM 비밀번호 정책 + MFA 강제 (팀 IAM 사용자 MFA 설정 완료 → 적용 가능, CLI 액세스키 주의)
 - **필살기 A**: 자동 대응 — SG 0.0.0.0/0 개방 시 Lambda가 자동 회수+알림(self-healing)
 - **필살기 B**: IAM Access Analyzer(무료) — 외부 노출 자동 탐지 + 최소권한 정책 생성

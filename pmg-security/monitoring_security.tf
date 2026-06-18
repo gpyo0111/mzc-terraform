@@ -82,6 +82,24 @@ resource "aws_cloudtrail" "main" {
   is_multi_region_trail         = true # [멀티 리전] 해커가 다른 나라 방에 숨어드는 행위 차단
   enable_log_file_validation    = true # [무결성 검증] 테라폼 표준 파라미터명으로 전면 수정 완료
 
+  # -----------------------------------------------------------------------
+  # [객체 수준 감사] audio 버킷의 uploads/ 폴더에만 S3 Data Events 기록
+  #   - 관리 이벤트(리소스 생성/삭제 등)는 그대로 유지(include_management_events=true)하면서
+  #   - 음성 원본(생체정보)이 저장되는 uploads/ 객체의 Get/Put(누가 어떤 음성에 접근했는가)을 추가 기록.
+  #   - [비용 통제] 생체정보 핵심인 uploads/ 1개 prefix로만 한정. results/(인식 결과)는 제외.
+  #     (S3 Data Events는 10만건당 $0.10 → prefix 한정으로 불필요한 이벤트 과금 차단)
+  #   - read_write_type="All": 업로드(Put)와 다운로드(Get) 모두 추적 → 생체정보 접근 감사.
+  # -----------------------------------------------------------------------
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true # 기존 관리 이벤트 기록 동작 보존 (이 블록 추가 시 기본값이 대체되므로 명시)
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["${data.aws_s3_bucket.audio.arn}/uploads/"] # uploads/ 하위 객체만 감사 (results/ 제외)
+    }
+  }
+
   depends_on = [aws_s3_bucket_policy.cloudtrail_logs_policy]
 }
 
