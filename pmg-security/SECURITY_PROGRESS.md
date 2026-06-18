@@ -10,6 +10,7 @@
 - **설명 방식:** 초등학생 눈높이 비유 + 보안 이점 + 운영 오버헤드(비용/관리) + apply 위험 함께 설명.
 - **추가 범위:** Trivy CI/CD(GitHub Actions)까지 포함. 보안 런북 .md 문서까지 포함.
 - **계정/리전:** account `455535733131`, 메인 `ap-northeast-2`(서울), 글로벌(WAF/CloudFront/SNS) `us-east-1` alias.
+- **작업 환경:** 사용자는 **WSL**에서 작업. `terraform` 명령은 WSL bash에서 실행(Windows PowerShell/Git Bash에는 terraform 미설치). 경로는 `/mnt/c/Users/tkfka/aws-project/mzc-terraform/pmg-security`. validate 예: `wsl -e bash -lc "cd /mnt/c/.../pmg-security && terraform validate"`.
 
 ---
 
@@ -128,15 +129,18 @@
 
 > **업데이트(2026-06-18):** 아래 KMS #7 조사 내용은 **이미 완료(옵션 A 적용)** 되어 히스토리로 보존. 현재 실제 중단 지점은 맨 위 ★ 블록 참조.
 
-### ★ 다음 세션 할 일 — IAM Access Analyzer → Lambda 자동대응 (집에서 이어서)
-> 사용자 결정: 남은 작업을 **① IAM Access Analyzer → ② Lambda 자동화** 순서로 진행. 두 작업 다 **아직 코드 작성 전(미착수)**. 아래는 착수용 설계 메모.
+### ★ 다음 세션 할 일 — ~~① IAM Access Analyzer~~ ✅ → ② Lambda 자동대응 (📅 내일 2026-06-19 진행)
+> 사용자 결정: 남은 작업을 **① IAM Access Analyzer → ② Lambda 자동화** 순서로 진행. **① 완료·apply 확인됨(2026-06-18)**.
+> **▶ 다음 작업은 내일(2026-06-19) ② Lambda 자동대응부터 시작** (아직 코드 미착수). 아래 설계 메모 참고해 착수.
 
-**① IAM Access Analyzer (외부 접근 분석기) — 무료·무위험, 먼저 진행**
-- 목적: 우리 S3 버킷/IAM 역할/KMS 키 등이 **외부 계정·퍼블릭에 실수로 노출**됐는지 자동·상시 탐지. (준수 축 보강)
+**① IAM Access Analyzer (외부 접근 분석기) — ✅ 완료 (2026-06-18, `access_analyzer.tf`, validate 통과)**
+- 목적: S3 버킷/IAM 역할/KMS 키 등이 **외부 계정·퍼블릭에 실수로 노출**됐는지 자동·상시 탐지. (준수 축 보강)
 - 비용: **무료** (외부 분석기만 사용. 미사용권한 분석 $0.20/ID·월, 내부 분석기 $9/리소스·월 → 둘 다 **안 씀**).
-- 핵심 리소스: `aws_accessanalyzer_analyzer` (type = `ACCOUNT`). 서울 1개. (us-east-1도 무료라 원하면 별칭으로 1개 추가 가능)
-- 알림 배선(선택): 신규 finding(외부 노출 발견)을 EventBridge(`source=aws.access-analyzer`, `detail-type=Access Analyzer Finding`)로 받아 기존 서울 SNS 토픽(`security_alerts_seoul`)에 발행 → 이메일. (GuardDuty 배선과 동일 패턴 재사용)
-- 위험: **없음**(순수 additive). apply 시 분석기 1개(+규칙/타깃) 생성.
+- 작성 내용: `aws_accessanalyzer_analyzer` (type=`ACCOUNT`) **서울 1개 + us-east-1 1개**(글로벌 자원 노출 커버, 둘 다 무료) + EventBridge 규칙/타깃 2개(`source=aws.access-analyzer`, `detail-type=Access Analyzer Finding`, `detail.status=ACTIVE`만) → 서울은 `security_alerts_seoul`, us-east-1은 기존 `security_alerts` 토픽 재사용.
+- **apply 예상:** 순수 additive — 분석기 2개 + EventBridge 규칙 2개 + 타깃 2개 = 6 added, 0 changed, 0 destroyed. 서비스/리소스 변경 없음(탐지 전용).
+- **apply 위험:** **없음.** 기존 SNS 토픽 재사용(토픽 정책은 이미 events 발행 허용 — GuardDuty 배선에서 설정됨). 신규 이메일 구독 없음 → 추가 Confirm 불필요.
+- **콘솔 확인:** IAM → 액세스 분석기(Access Analyzer)에 `securevoice-dev-account-analyzer` 활성 + (있다면) 외부 노출 finding 표시. 서울/버지니아 각각.
+- **[apply 확인됨]** 사용자가 정상 apply 완료 (2026-06-18).
 
 **② Lambda 자동대응(self-healing) — SG 0.0.0.0/0 개방 시 자동 회수 + 알림**
 - 목적: 보안그룹에 `0.0.0.0/0` 인바운드가 열리면 **Lambda가 자동으로 해당 규칙을 회수(revoke)하고 SNS로 알림**. (대응 축 → 자동화로 승격, 필살기)
