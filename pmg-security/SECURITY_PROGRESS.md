@@ -10,7 +10,10 @@
 - **설명 방식:** 초등학생 눈높이 비유 + 보안 이점 + 운영 오버헤드(비용/관리) + apply 위험 함께 설명.
 - **추가 범위:** Trivy CI/CD(GitHub Actions)까지 포함. 보안 런북 .md 문서까지 포함.
 - **계정/리전:** account `455535733131`, 메인 `ap-northeast-2`(서울), 글로벌(WAF/CloudFront/SNS) `us-east-1` alias.
-- **작업 환경:** 사용자는 **WSL**에서 작업. `terraform` 명령은 WSL bash에서 실행(Windows PowerShell/Git Bash에는 terraform 미설치). 경로는 `/mnt/c/Users/tkfka/aws-project/mzc-terraform/pmg-security`. validate 예: `wsl -e bash -lc "cd /mnt/c/.../pmg-security && terraform validate"`.
+- **작업 환경:** 사용자는 **WSL**에서 작업. `terraform` 명령은 WSL bash에서 실행(Windows PowerShell/Git Bash에는 terraform 미설치). terraform v1.14.9 확인됨(2026-06-19).
+  - ⚠️ **작업 위치(드라이브)가 장소마다 다름:** 학원=`D:\aws-project`(=`/mnt/d/aws-project/...`), 집=`C:\...`(=`/mnt/c/...`). **사용자가 세션 시작 시 어디서 작업하는지 알려주면 그 경로에 맞춰 진행.** 경로 하드코딩 금지.
+  - validate 예(D 기준): `wsl -e bash -lc "cd /mnt/d/aws-project/mzc-terraform/pmg-security && terraform validate"`.
+  - ※ archive 프로바이더 추가됨 → 새 환경에선 `terraform init` 1회 필요.
 
 ---
 
@@ -129,9 +132,27 @@
 
 > **업데이트(2026-06-18):** 아래 KMS #7 조사 내용은 **이미 완료(옵션 A 적용)** 되어 히스토리로 보존. 현재 실제 중단 지점은 맨 위 ★ 블록 참조.
 
-### ★ 다음 세션 할 일 — ~~① IAM Access Analyzer~~ ✅ → ② Lambda 자동대응 (📅 내일 2026-06-19 진행)
+### ★ 다음 세션 할 일 — ~~① IAM Access Analyzer~~ ✅ → ~~② Lambda 자동대응~~ ✅ 코드완료(apply 대기) → ③ 전체 코드리뷰
 > 사용자 결정: 남은 작업을 **① IAM Access Analyzer → ② Lambda 자동화** 순서로 진행. **① 완료·apply 확인됨(2026-06-18)**.
-> **▶ 다음 작업은 내일(2026-06-19) ② Lambda 자동대응부터 시작** (아직 코드 미착수). 아래 설계 메모 참고해 착수.
+> **▶ ② Lambda 자동대응: 코드 작성·validate 통과 완료(2026-06-19). 사용자 apply 대기 중.** 아래 [#② 완료] 로그 참조.
+
+#### ⏯️ 현재 중단 지점 (2026-06-19 세션 종료 시점) — 다음 세션 여기서 이어서
+**지금 상태:** SG 자동대응 Lambda 코드 작성·validate 통과. **아직 apply 안 함.** 코드는 D 또는 C 드라이브에 있으나 git push/apply 모두 미실시.
+
+**▶ 다음 세션 시작 시 먼저 할 일 (순서):**
+1. **사용자가 작업 위치(드라이브) 먼저 알려주기** → 그 경로로 `terraform init`(archive provider) → `plan` → `apply`. (SG Lambda는 드라이런 기본값이라 첫 apply 안전.)
+2. apply 후 콘솔 확인(테스트 SG에 22번 `0.0.0.0/0` 추가 → 서울 보안 이메일 수신, 드라이런이면 회수 안 됨).
+3. 오탐 0 확인되면 `var.sg_auto_revoke_enabled=true`로 회수 활성화 여부 결정.
+
+**🟡 SG Lambda 관련 열린 결정 2개 (apply 전/후 정하면 됨):**
+- (a) **첫 apply를 드라이런으로 갈지 / 처음부터 회수 켤지** — 현재 기본값=드라이런(권장). 사용자 답변 대기.
+- (b) **`ModifySecurityGroupRules` 트리거 추가 여부** — 현재 코드는 규칙 *추가*(`AuthorizeSecurityGroupIngress`)만 잡고 콘솔에서 기존 규칙을 *편집*해 `0.0.0.0/0`으로 바꾸는 건 못 잡음(실제 사각지대). 추가하려면 핸들러 groupId 추출 보강 필요. 사용자 결정 대기.
+
+**🟢 다음 자동대응 후보 — 이번 세션 논의 완료, 코드 미착수:**
+- **A) CloudTrail 자동 재가동 Lambda (1순위 추천)** — 누가 `StopLogging`/`DeleteTrail` 하면 `cloudtrail_tampering` 규칙(security_event_alerts.tf, 이미 존재) 재사용해 Lambda가 즉시 재가동+알림. 위험 낮음($0). **항상 켜져야 하는 이유는 사용자에게 설명 완료**(CloudTrail이 EventBridge알림·Athena·GuardDuty·생체정보감사의 토대 / 공격자 first move=로그끄기 T1562 / 로그공백 소급복구불가 / 생체정보 컴플라이언스 / 무결성·부인방지 / 공용계정 책임추적). → **사용자가 진행하라 하면 SG와 같은 패턴(드라이런 토글+최소권한)으로 작성.**
+- **B) 계정 레벨 S3 Block Public Access** (`aws_s3_account_public_access_block`) — Lambda보다 간단·강력한 예방. 저위험·$0.
+- **C) EBS 기본 암호화** (`aws_ebs_encryption_by_default`) — 예방 설정 한 줄, 위험 없음·$0.
+- **알림만 유지(자동대응 부적합):** IAM 민감 변경, 루트 사용 — 자동 되돌리면 정상 작업 파괴 위험.
 
 **① IAM Access Analyzer (외부 접근 분석기) — ✅ 완료 (2026-06-18, `access_analyzer.tf`, validate 통과)**
 - 목적: S3 버킷/IAM 역할/KMS 키 등이 **외부 계정·퍼블릭에 실수로 노출**됐는지 자동·상시 탐지. (준수 축 보강)
@@ -149,6 +170,17 @@
 - 비용: 실질 **$0** (Lambda 무료한도 내, 드문 트리거).
 - ⚠️ **위험: 중.** 잘못 짜면 **정상적인 SG 변경까지 자동 회수**해 서비스 영향 가능. → ⓐ 회수 대상을 `0.0.0.0/0` + 위험 포트(22/3306 등)로 **좁히고**, ⓑ 처음엔 **회수 없이 알림만**(dry-run) 돌려 오탐 확인 후 회수 활성화 권장. ⓒ 예외 태그(예: `AutoRemediate=false`) 설계 고려.
 - 착수 전 확인: `security_event_alerts.tf`의 기존 SG 룰과 패턴 충돌/중복 여부 점검.
+
+**[#② 완료 — 코드/validate, apply 대기]** SG 0.0.0.0/0 자동대응 Lambda (lambda_auto_remediation.tf + lambda/sg_auto_remediate/index.py, terraform validate 통과)
+- **재사용:** 새 EventBridge 규칙을 만들지 않고 기존 `aws_cloudwatch_event_rule.sg_rule_changes`(security_event_alerts.tf, AuthorizeSecurityGroupIngress/Egress 탐지)에 **Lambda 타깃만 추가** → 룰 중복 없음. 알림(SNS)과 자동대응(Lambda)이 같은 트리거 공유.
+- **안전 설계:** ⓐ 위험포트(22/23/21/3389/3306/5432/1433/6379/11211/27017/9200)+전체포트(-1) 에 `0.0.0.0/0`·`::/0` 인 인바운드만 대상. ⓑ `var.sg_auto_revoke_enabled` 기본 **false=드라이런(알림만)** → 오탐 관찰 후 true 로 회수 활성화. ⓒ SG 태그 `AutoRemediate=false` 면 건너뜀(의도적 개방 예외).
+- **동작:** Lambda가 이벤트의 groupId로 SG 현재 상태를 재조회 → 실제로 열려있는 위험 규칙만 처리(이벤트 파싱 의존 최소화). 인바운드(AuthorizeSecurityGroupIngress)만 처리, egress 이벤트는 즉시 skip.
+- **최소권한 IAM:** logs(전용 로그그룹만), ec2:DescribeSecurityGroups(`*` — Describe는 리소스제한 미지원, AWS 제약), ec2:RevokeSecurityGroupIngress(이 계정/서울 리전 SG ARN으로 한정), sns:Publish(서울 토픽 1개만).
+- **신규 의존성:** `hashicorp/archive` 프로바이더 추가(provider.tf) — 파이썬 zip 패키징용. `terraform init` 1회 필요.
+- **apply 예상:** additive — archive(zip) + IAM role/policy + log group + lambda + event target + lambda permission ≈ 6 added, 0 changed, 0 destroyed. 기존 SG/서비스 변경 없음.
+- **apply 위험:** **낮음(드라이런 기본값 덕).** 첫 apply는 회수 안 함=알림만이라 정상 SG 변경을 잘못 막을 위험 없음. 회수 켜기 전(`sg_auto_revoke_enabled=true`) 알림 로그로 오탐 0 확인 권장.
+- **콘솔 확인:** ① Lambda 콘솔에 `securevoice-dev-sg-auto-remediate` 존재. ② 테스트 SG에 22번 포트 `0.0.0.0/0` 인바운드 추가 → 서울 보안 이메일로 "[보안경보] SG 위험 개방 탐지" 수신(드라이런이면 회수 안 됨). ③ CloudWatch Logs `/aws/lambda/...-sg-auto-remediate`에 실행 로그.
+- **사용자 할 일:** WSL에서 `terraform init`(archive provider) → `terraform plan` 확인 → `terraform apply`. (회수 활성화는 이후 `-var sg_auto_revoke_enabled=true` 또는 변수 기본값 변경)
 
 **③ (전체 작업 종료 후) 전체 코드 리뷰** — 사용자 요청으로 **맨 마지막**에 수행 (후보3 `audio_oac_policy` 죽은코드 제거 포함).
 

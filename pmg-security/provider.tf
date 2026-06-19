@@ -6,6 +6,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    # Lambda 소스 코드를 zip으로 패키징하기 위한 프로바이더
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 
   # 4번 보안 폴더 자체의 State 파일 저장소 정의
