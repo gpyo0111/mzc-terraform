@@ -186,36 +186,14 @@ resource "aws_cloudfront_origin_access_control" "oac" {
 }
 
 # =========================================================================
-# [OAC 하드닝] 3. 오디오 버킷에 OAC 전용 지문 인식 문지기 정책(Bucket Policy) 주입
+# [OAC 하드닝] 3. (제거됨) audio 버킷 OAC 버킷 정책 — 죽은 설정 정리 (2026-06-23)
+# -------------------------------------------------------------------------
+# 사유: audio 버킷은 SSE-KMS(securevoice_master)로 암호화되는데, 그 KMS 키 정책에
+#       CloudFront 복호화 권한이 없어 CloudFront로는 audio 객체를 복호화·서빙할 수 없음.
+#       또한 음성(생체정보)은 API/프리사인드 URL 경로로만 주고받으므로 CloudFront 직접
+#       서빙 대상도 아님 → 이 버킷 정책은 실효 없는 죽은 설정이라 제거.
+#       (web_static OAC 정책은 KMS 비암호화 정적파일이라 정상 동작 → 아래에 유지)
 # =========================================================================
-resource "aws_s3_bucket_policy" "audio_oac_policy" {
-  bucket = data.aws_s3_bucket.audio.id # 위 단계에서 변수로 룩업해 온 오디오 버킷 ID에 이 방화벽 정책 장부를 결합합니다.
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontOACAccess" # 이 보안 정책 스크립트 블록의 목적을 명시하는 고유 식별자 이름입니다.
-        Effect = "Allow"                    # 아래 명시된 조건을 완벽하게 충족하는 요청에 한해 진입을 승인(Allow)합니다.
-        Principal = {
-          Service = "cloudfront.amazonaws.com" # 접근을 시도하는 공격 주체를 일반 익명 해커가 아닌 AWS CloudFront 핵심 서비스로만 제한합니다.
-        }
-        # 오디오 버킷은 유저들이 목소리를 전송하고 가져가므로 파일 다운로드(Get)와 업로드(Put) 권한을 정밀 부여합니다.
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject"
-        ]
-        Resource = "${data.aws_s3_bucket.audio.arn}/*" # 오디오 버킷 내부의 모든 디렉터리와 하위 음성 파일 객체들을 보호 대상으로 지정합니다.
-        Condition = {
-          ArnEquals = {
-            # 초강력 가드레일: 전 세계 수많은 CloudFront 중 오직 '우리 팀의 고유 배포 ARN' 주소 도장이 찍힌 요청만 최종 통과시킵니다.
-            "aws:SourceArn" = data.aws_cloudfront_distribution.cf.arn
-          }
-        }
-      }
-    ]
-  })
-}
 
 # =========================================================================
 # [OAC 하드닝] 4. 웹 정적 소스(React 컴포넌트) 버킷에도 동일한 OAC 정책 바인딩

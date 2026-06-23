@@ -78,10 +78,12 @@ resource "aws_cloudwatch_event_target" "iam_sensitive_changes_sns" {
 # 3. [서울] 보안그룹 인바운드/아웃바운드 규칙 변경 탐지 (방화벽 구멍 뚫기 징후)
 #    참고: 특정 0.0.0.0/0 값까지 패턴으로 정밀 매칭하긴 까다로워, SG 규칙 변경 행위 자체를
 #         알림 → 사람이 검토하는 방식(현업에서 흔한 안전한 기본값).
+#    ※ ModifySecurityGroupRules 포함: 기존 규칙을 '편집'해 0.0.0.0/0 으로 바꾸는 경우(콘솔
+#      규칙 편집)는 Authorize* 로 안 잡혀 사각지대였음 → 자동대응 Lambda 가 이 경로도 커버.
 # -------------------------------------------------------------------------
 resource "aws_cloudwatch_event_rule" "sg_rule_changes" {
   name        = "${var.project_name}-${var.env}-sg-rule-changes"
-  description = "Alert on security group rule authorizations (potential firewall opening)"
+  description = "Alert on security group rule authorizations/modifications (potential firewall opening)"
 
   event_pattern = jsonencode({
     source        = ["aws.ec2"]
@@ -89,7 +91,8 @@ resource "aws_cloudwatch_event_rule" "sg_rule_changes" {
     detail = {
       eventName = [
         "AuthorizeSecurityGroupIngress",
-        "AuthorizeSecurityGroupEgress"
+        "AuthorizeSecurityGroupEgress",
+        "ModifySecurityGroupRules"
       ]
     }
   })

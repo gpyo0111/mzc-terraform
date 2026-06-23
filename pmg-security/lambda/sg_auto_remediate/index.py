@@ -45,6 +45,12 @@ RISKY_PORTS = {
 EXEMPT_TAG_KEY = "AutoRemediate"
 EXEMPT_TAG_VALUE = "false"
 
+# 처리 대상 이벤트
+#  - AuthorizeSecurityGroupIngress: 인바운드 규칙 '추가'(새 규칙/새 SG 채우기 포함)
+#  - ModifySecurityGroupRules     : 기존 규칙 '편집'(예: 10.0.0.0/16 → 0.0.0.0/0 으로 변경)
+# 둘 다 SG 현재 상태를 재조회해 '실제로 열린' 위험 규칙만 처리하므로 동일 로직으로 안전 처리.
+HANDLED_EVENTS = {"AuthorizeSecurityGroupIngress", "ModifySecurityGroupRules"}
+
 
 def _port_range_is_risky(perm):
     """이 규칙(perm)이 위험 포트를 하나라도 덮는지 판단."""
@@ -93,16 +99,31 @@ def _notify(subject, lines):
     print(json.dumps({"sns_subject": subject, "message": msg}))
 
 
+def _extract_group_id(detail):
+    """이벤트 형식이 달라도 groupId 를 최대한 견고하게 추출.
+
+    - AuthorizeSecurityGroupIngress: requestParameters.groupId
+    - ModifySecurityGroupRules     : requestParameters.ModifySecurityGroupRulesRequest.groupId
+      (CloudTrail 이 키 대소문자를 groupId/GroupId 로 다르게 기록하는 경우까지 대비)
+    """
+    rp = detail.get("requestParameters") or {}
+    if rp.get("groupId"):
+        return rp["groupId"]
+    modify = rp.get("ModifySecurityGroupRulesRequest") or {}
+    return modify.get("groupId") or modify.get("GroupId")
+
+
 def handler(event, context):
     detail = event.get("detail", {})
     event_name = detail.get("eventName", "")
 
-    # 인바운드 권한부여만 처리(아웃바운드/기타는 무시 → 같은 규칙을 공유해도 안전)
-    if event_name != "AuthorizeSecurityGroupIngress":
+    # 인바운드 추가(Authorize) + 기존 규칙 편집(Modify)만 처리.
+    # 아웃바운드(egress)/기타 이벤트는 무시 → 같은 EventBridge 규칙을 공유해도 안전.
+    if event_name not in HANDLED_EVENTS:
         print(f"skip: eventName={event_name}")
         return {"status": "skipped", "reason": event_name}
 
-    group_id = (detail.get("requestParameters") or {}).get("groupId")
+    group_id = _extract_group_id(detail)
     if not group_id:
         print("skip: groupId not found in event")
         return {"status": "skipped", "reason": "no groupId"}

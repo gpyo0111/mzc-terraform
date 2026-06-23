@@ -69,17 +69,12 @@ resource "aws_security_group_rule" "alb_https_ingress" {
 }
 
 # =========================================================================
-# 3. [VPC 엔드포인트 통제] 사설 엔드포인트를 VPC 내부 대역(10.0.0.0/22)으로 제한
+# 3. [VPC 엔드포인트 통제] — 제거됨 (2026-06-22)
+#   기존: 443 ← 10.0.0.0/22 (VPC 전체 대역) 인입 허용 규칙을 여기서 관리했음.
+#   제거 사유: VPCE SG(securevoice-dev-runtime-vpce-sg)에는 인프라 원본 레이어가 만든
+#     실제 프라이빗 서브넷 규칙(443 ← 10.0.1.0/25, 10.0.0.128/25)이 이미 존재.
+#     /22 는 그 /25 들을 모두 덮는 '더 넓은' 중복 규칙이라, 유지하면 최소권한을 오히려 약화.
+#   조사 근거: CloudTrail/Athena 로 /22 는 mzc-pmg(2026-06-09 추가)→mzc-kjh(2026-06-19 회수)
+#     확인. /25 는 CloudTrail 보존창(30일) 이전부터 존재 = 타 레이어 소유 베이스라인.
+#   결론: VPCE 인입 통제는 소유 레이어의 /25 규칙에 일임하고, pmg-security 는 손대지 않음.
 # =========================================================================
-resource "aws_security_group_rule" "vpc_endpoint_private_ingress" {
-  type      = "ingress"
-  from_port = 443
-  to_port   = 443
-  protocol  = "tcp"
-
-  # 규칙이 박힐 대상: 검색해 온 VPCE 보안 그룹 ID
-  security_group_id = data.aws_security_group.vpce.id
-  cidr_blocks       = ["10.0.0.0/22"] # 아키텍처 상의 전체 VPC 대역 할당
-
-  description = "Restrict VPC Endpoint access strictly to internal VPC CIDR block"
-}

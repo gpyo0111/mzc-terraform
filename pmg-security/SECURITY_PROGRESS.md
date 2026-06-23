@@ -130,7 +130,60 @@
 
 ## 6. ⏯️ 현재 중단 지점 (다음 세션 여기서 이어서)
 
+> **🧊 [범위 동결 SCOPE FREEZE — 2026-06-22]** 신규 기능 추가 중단. 실무 평가상 범위는 충분(오히려 넘침). 이제부터는 **① 다듬기 ② 검증(Lambda true 데모) ③ 발표/포트폴리오 서사**에 집중. **새 Lambda/서비스 추가 금지** — 추가하고 싶으면 "이게 깊이/서사에 기여하나, 단일 dev에 과한가" 먼저 자문.
+> **남은 실작업은 ALB 80 정리(팀 작업 종료 후)뿐.** ALB는 팀원이 작업용으로 80 열어둔 것 → pmg-security 코드는 CloudFront prefix(443) 규칙만 관리하면 됨. 80은 팀 종료 후 닫기/조이기(prod 전 필수).
+
+#### 📚 [진행 중] tf 파일 학습·발표정리 (docs/ 폴더) — 내일 여기서 이어서
+> **방식:** tf를 발표 흐름 5단계로 묶어, 단계별로 [같이 읽기 → 설명 → `docs/NN_*.md` 저장] 반복. 각 파일은 **무엇/왜/어떻게 작동/🎤발표위치/❓예상질문** 템플릿.
+> **발표 구조(docs/00_OVERVIEW.md):** ①왜보안(생체정보) → ②익숙한 아키텍처 경로를 보안렌즈로 다시걷기(예방) → ③줌아웃: 다 감시중(탐지) → ④뚫리면 대응+🔥드리프트 실전사고+자가복구 데모 → ⑤안 한 것의 이유(판단력).
+
+**✅ 완료한 docs:**
+- `docs/00_OVERVIEW.md` — 발표 구조 + 리전분리 + tf→단계 인덱스표 + 관련문서 링크
+- `docs/01_FOUNDATION.md` — provider/variables/locals/data_*/outputs (배선: 2리전, S3 state, 읽기전용 참조)
+- `docs/02_PREVENTION.md` — kms/s3/security_groups/worker_sg/iam_hardening (암호화 3박자 + 접근통제). ⚠️기록해둔 정직포인트: `audio_oac_policy` 죽은설정(KMS 복호화권한 없어 CloudFront audio 서빙 불가→✅제거완료 2026-06-23), ALB 80-from-0.0.0.0/0, 워커 egress 0.0.0.0/0 넓음.
+- `docs/03_PERIMETER.md` — waf.tf (CloudFront 엣지 WAFv2 5룰 + us-east-1 provider alias 출발점). ⚠️정직포인트: 규칙1~4 Count(감시만)·규칙5(디도스)만 Block→#6 전환 보류·발표 구두설명, WAF↔CloudFront 콘솔연결 검증 필요, tags 하드코딩.
+
+**▶ 시작점 — ⓪ `audio_oac_policy` 죽은설정 제거 ✅ → 현재 `docs/03_PERIMETER.md` 진행 중:**
+0. **[정리/다듬기 ✅ apply 완료 2026-06-23] `s3_security.tf`의 `aws_s3_bucket_policy.audio_oac_policy` 제거.** 사유: audio는 SSE-KMS인데 KMS 키정책에 CloudFront 복호화 권한 없음 → CloudFront audio 서빙 불가 = 죽은 설정. 음성은 API/프리사인드URL 경로라 CloudFront 직접 대상도 아님. (web_static OAC는 유효하니 유지). validate 통과 → 사용자 apply 완료(destroy 1건). 코드엔 제거 사유 주석으로 보존.
+1. **03 PERIMETER**: `waf.tf` (WAFv2 5룰+rate-limit, +us-east-1 provider 정의가 여기 있음). ✅ 완료(docs/03_PERIMETER.md)
+2. **04 DETECTION**: `monitoring_security.tf`(CloudTrail+Flow Logs), `guardduty_security.tf`, `access_analyzer.tf`, `athena_results.tf`. ✅ 완료(docs/04_DETECTION.md)
+3. **05 ALERTING**: `monitoring_alerts.tf`, `security_event_alerts.tf`. ✅ 완료(docs/05_ALERTING.md)
+4. **06 RESPONSE**: `lambda_auto_remediation.tf`, `cloudtrail_auto_recovery.tf` (+lambda python 2개). ✅ 완료(docs/06_RESPONSE.md)
+> 진행 방법: 해당 단계 tf 읽고 → 채팅으로 설명 → 이해확인 → `docs/0N_*.md` 저장 → 다음 단계.
+
+#### 🏁 docs 학습·발표정리 1바퀴 완료 (2026-06-23) — 00~06 전부 작성됨
+> 다음 단계: **콘솔/코드 돌며 발표자료용 캡쳐(스크린샷) 작업.** 캡쳐 체크리스트는 `docs/CAPTURE_CHECKLIST.md` 참조.
+
 > **업데이트(2026-06-18):** 아래 KMS #7 조사 내용은 **이미 완료(옵션 A 적용)** 되어 히스토리로 보존. 현재 실제 중단 지점은 맨 위 ★ 블록 참조.
+
+### ⚠️ [2026-06-22 발견] SG 드리프트 (팀원 apply로 코드↔실제 어긋남) — apply 전 처리 필요
+> #② Lambda apply 하려고 `terraform plan` 돌렸더니, 우리 작업과 무관한 SG 규칙 2개가 `+ create`로 잡힘(`security_groups.tf`의 SG 체이닝 규칙). 콘솔 확인 결과 **실제 AWS의 SG 내용이 코드와 달라진 진짜 드리프트**. 사용자 추정: 팀원이 잘못 apply.
+
+**🔴 ALB SG (`sg-06de5768b9fcb7c2e`, securevoice-dev-alb-sg) — 보안 회귀(중요):**
+- 코드(`aws_security_group_rule.alb_https_ingress`): 443 ← CloudFront PrefixList `pl-22a6434b` 에서만 (오리진 우회 차단 설계).
+- 실제 AWS: 인바운드 1개 = `sgr-0a8a4cefd676e17a7` **HTTP 80 ← `0.0.0.0/0` (전 세계 개방)**. 443-from-CloudFront 규칙은 사라짐.
+- 영향: **누구나 ALB 80번 직접 접근 가능 → CloudFront/WAF 우회.** 프로젝트 핵심 통제(WAF) 무력화.
+- ※ 오늘 만든 SG Lambda는 이걸 자동회수 안 함(80은 RISKY_PORTS 제외 — 공개웹 정상케이스라). 설계 리뷰로 잡아야 하는 영역.
+
+**🟡 VPCE SG (`sg-015b9f79b8989b38f`, securevoice-dev-runtime-vpce-sg) — 위험 아님(오히려 타이트):**
+- 코드(`aws_security_group_rule.vpc_endpoint_private_ingress`): 443 ← `10.0.0.0/22`.
+- 실제 AWS: 443 ← `10.0.1.0/25`(`sgr-0e074b11f1a47f51e`) + `10.0.0.128/25`(`sgr-0f0e6d2924f5bba33`) — 실제 서브넷만, 더 좁음.
+- 둘 다 /22의 부분집합 → 현재가 최소권한상 더 나음. apply하면 /22가 추가돼 **다시 넓어짐**(되돌리는 셈).
+
+**🔎 [조사 완료 2026-06-22] CloudTrail/Athena 추적 결과:**
+- **ALB**: `mzc-pmg`(나)가 443←CloudFront PL 추가 → **`mzc-kjh`가 2026-06-19 09:01:48 UTC 회수(Revoke)**. 80←`0.0.0.0/0`은 원래 베이스라인. → kjh가 보안 강화 규칙을 지운 것.
+- **VPCE**: `/22`는 `mzc-pmg`(나)가 2026-06-09 추가 → `mzc-kjh`가 2026-06-19 09:01:15 회수. `/25` 2개 Authorize 기록은 CloudTrail 보존창(30일) 이전 = **타 레이어가 만든 원본 베이스라인**으로 확정.
+- **결론(사용자 판단):** kjh의 회수는 **실수**로 파악. ALB는 복원, VPCE는 /25에 일임.
+
+**▶ 결정·조치 (2026-06-22, 사용자 확정):**
+1. **ALB 443-from-CloudFront → apply로 복원** ✅ (코드 `alb_https_ingress` 유지 → plan에 `will be created`로 잡힘). ※ 80-from-world는 코드 밖 규칙이라 apply로 안 지워짐 → 별도 정리 대상(미해결, 출처 추적 필요).
+2. **VPCE `/22` 규칙 코드에서 제거** ✅ (`security_groups.tf`의 `aws_security_group_rule.vpc_endpoint_private_ingress` 삭제, 주석으로 사유 보존). 인입 통제는 소유 레이어의 `/25`에 일임. → plan에서 /22 완전히 사라짐(refresh 시 state 자동 정리, create/destroy 0).
+3. kjh 회수 = 실수로 확인 완료.
+- **갱신된 plan: `13 to add, 1 to change, 0 to destroy`** (Lambda 12 + ALB 443 복원 1 = add 13 / sg_rule_changes에 ModifySecurityGroupRules = change 1). validate 통과.
+- **✅ apply 완료 (2026-06-22):** ALB 443-from-CloudFront 복원됨. VPCE /22 제거됨(팀 /25 유지). Lambda 2개 드라이런 배포.
+- **🟠 남은(미해결):** ALB **80-from-`0.0.0.0/0`** 출처 파악·정리. 코드 밖 규칙이라 apply로 안 지워짐. WAF 우회 위험 → 별도 정리 필요(팀에 80 의도 확인 후).
+
+**[교훈/면접 소재]** 이번 건은 "보안 통제를 코드에 박아둬도, 공용계정에서 팀원의 apply/콘솔 변경으로 드리프트가 생긴다"는 산 증거. → ⓐ `terraform plan` 정기 점검의 가치(자동 Config 없이도 드리프트 포착), ⓑ SG 같은 공용 리소스는 단일 레이어가 소유권 갖고 변경창구 일원화 필요, ⓒ 자동화(Lambda)가 못 잡는 "설계상 위반"(80은 정상포트지만 CloudFront-only여야 함)은 코드리뷰/탐지로 보완.
 
 ### ★ 다음 세션 할 일 — ~~① IAM Access Analyzer~~ ✅ → ~~② Lambda 자동대응~~ ✅ 코드완료(apply 대기) → ③ 전체 코드리뷰
 > 사용자 결정: 남은 작업을 **① IAM Access Analyzer → ② Lambda 자동화** 순서로 진행. **① 완료·apply 확인됨(2026-06-18)**.
@@ -181,6 +234,21 @@
 - **apply 위험:** **낮음(드라이런 기본값 덕).** 첫 apply는 회수 안 함=알림만이라 정상 SG 변경을 잘못 막을 위험 없음. 회수 켜기 전(`sg_auto_revoke_enabled=true`) 알림 로그로 오탐 0 확인 권장.
 - **콘솔 확인:** ① Lambda 콘솔에 `securevoice-dev-sg-auto-remediate` 존재. ② 테스트 SG에 22번 포트 `0.0.0.0/0` 인바운드 추가 → 서울 보안 이메일로 "[보안경보] SG 위험 개방 탐지" 수신(드라이런이면 회수 안 됨). ③ CloudWatch Logs `/aws/lambda/...-sg-auto-remediate`에 실행 로그.
 - **사용자 할 일:** WSL에서 `terraform init`(archive provider) → `terraform plan` 확인 → `terraform apply`. (회수 활성화는 이후 `-var sg_auto_revoke_enabled=true` 또는 변수 기본값 변경)
+
+**[#② 보강 완료 — ✅ apply 완료 (2026-06-22)] (드라이런 상태로 배포됨)** SG 사각지대 보강 + CloudTrail 자동복구 추가
+> ✅ apply 완료. 두 Lambda 모두 **드라이런(알림만)** 상태로 가동 중. **데모/발표 자료 만들 때 `sg_auto_revoke_enabled=true` / `cloudtrail_auto_recover_enabled=true`로 변경해 실제 자동회수·자동복구 작동 확인 예정.**
+- **SG: `ModifySecurityGroupRules` 커버** (sg_auto_remediate/index.py + security_event_alerts.tf)
+  - 기존 규칙을 콘솔에서 *편집*해 `0.0.0.0/0` 으로 바꾸는 경로(=`AuthorizeSecurityGroupIngress` 로 안 잡히던 사각지대)를 EventBridge 규칙 eventName 에 `ModifySecurityGroupRules` 추가 + 핸들러 `HANDLED_EVENTS` 확장 + `_extract_group_id()`(Modify 이벤트의 `ModifySecurityGroupRulesRequest.groupId` 추출)로 커버.
+  - 회수=문제 규칙 한 줄만 revoke(SG/다른 규칙 보존). 새 SG를 규칙 포함 생성해도 Authorize 단계에서 위험 규칙만 제거됨(SG 삭제 아님).
+- **CloudTrail 자동복구 Lambda 신설** (cloudtrail_auto_recovery.tf + lambda/cloudtrail_auto_recover/index.py)
+  - 기존 `aws_cloudwatch_event_rule.cloudtrail_tampering`(security_event_alerts.tf) **재사용**, Lambda 타깃만 추가(룰 중복 없음).
+  - StopLogging→`start_logging` 재가동 / DeleteTrail→트레일 원설정대로 `create_trail`+데이터이벤트(`uploads/`) 재적용+`start_logging`. 재생성 설정값은 `aws_cloudtrail.main` 실제 속성에서 env 주입(코드/실물 일치).
+  - **UpdateTrail/PutEventSelectors 는 자동복구 안 함**(정상 Terraform 변경과 충돌 방지) → 알림만 유지.
+  - 토글 `var.cloudtrail_auto_recover_enabled` 기본 **false=드라이런**(SG와 동일 철학). 최소권한 IAM: cloudtrail Start/Create/PutEventSelectors는 우리 트레일 ARN 한정, sns:Publish 서울 토픽 1개.
+  - **신규 EventBridge 규칙/SNS 구독 없음** → 추가 Confirm 불필요. archive 프로바이더는 SG Lambda와 공유(추가 init 불필요).
+  - **apply 예상:** additive ≈ archive(zip)+IAM role/policy+log group+lambda+event target+lambda permission. SG Lambda 변경분(타깃/핸들러)은 in-place. 기존 트레일/SG/서비스 변경 없음.
+  - **콘솔 확인:** ① Lambda `securevoice-dev-cloudtrail-auto-recover` 존재. ② 테스트로 트레일 StopLogging → 서울 보안 이메일 "[보안경보] CloudTrail 변조 탐지: StopLogging" 수신(드라이런이면 재가동 안 함). ③ SG 규칙 편집(0.0.0.0/0)으로 ModifySecurityGroupRules 경보 확인.
+  - **사용자 할 일:** (이미 init된 D 환경) `terraform plan` 확인 → 팀원 상의 후 `terraform apply`. 회수/복구 켜기는 `-var sg_auto_revoke_enabled=true` / `-var cloudtrail_auto_recover_enabled=true`.
 
 **③ (전체 작업 종료 후) 전체 코드 리뷰** — 사용자 요청으로 **맨 마지막**에 수행 (후보3 `audio_oac_policy` 죽은코드 제거 포함).
 
