@@ -127,8 +127,8 @@ Terraform provider의 `aws_profile` 기본값은 `null`이다. 기본적으로 �
 AWS CLI의 `login` 방식 profile을 쓰는 경우에는 AWS CLI는 인증을 읽을 수 있지만 Terraform AWS provider가 그 profile을 직접 읽지 못할 수 있다. 이때는 같은 WSL/bash shell에서 credential을 환경변수로 export한 뒤 Terraform을 실행한다.
 
 ```bash
-aws login --profile kjh
-source <(aws configure export-credentials --profile kjh --format env)
+aws login --profile bya
+source <(aws configure export-credentials --profile bya --format env)
 aws sts get-caller-identity
 ```
 

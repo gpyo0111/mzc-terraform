@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "aws_profile" {
   type    = string
-  default = "kjh"
+  default = "bya"
 }
 
 variable "account_id" {
@@ -83,3 +83,4 @@ variable "enable_jenkins_webhook_alb_rule" {
   default     = false
   description = "Set true only after team approval to route /github-webhook/* from the service ALB to Jenkins."
 }
+

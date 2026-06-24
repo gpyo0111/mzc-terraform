@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "aws_profile" {
   type    = string
-  default = "kjh"
+  default = "bya"
 }
 
 provider "aws" {

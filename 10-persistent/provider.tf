@@ -10,6 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = var.aws_profile
+  region = var.aws_region
+  # region = "ap-northeast-2"
+  # profile = var.aws_profile
 }

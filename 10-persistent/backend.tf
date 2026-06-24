@@ -5,5 +5,6 @@ terraform {
     region         = "ap-northeast-2"
     dynamodb_table = "securevoice-terraform-lock"
     encrypt        = true
+    #    profile        = "default" # 추가
   }
 }
