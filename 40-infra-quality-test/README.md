@@ -63,3 +63,10 @@ bash run_all.sh
 - 이 테스트는 **읽기 전용(Read-Only)** 검증이 원칙입니다. 인프라 리소스를 변경하지 않습니다.
 - `05_alb_routing/test_alb.py` 는 실제 HTTP 요청을 보내므로 ALB가 ACTIVE 상태여야 합니다.
 - AWS CLI/SDK 권한이 필요합니다: `ecs:Describe*`, `rds:Describe*`, `s3:GetBucketPolicy`, `iam:GetRole`, `cloudwatch:DescribeAlarms`
+
+# 테스트 이동
+cd mzc-terraform/40-infra-quality-test
+# 09만 단독 실행
+bash run_all.sh 09
+# 전체 실행 (09 포함)
+bash run_all.sh

@@ -21,6 +21,7 @@ ALL_MODULES=(
     "05_alb_routing"
     "06_s3_security"
     "07_iam_security"
+    "09_recovery_stability"
 )
 
 # 인수로 특정 모듈 번호 지정 시 필터링
