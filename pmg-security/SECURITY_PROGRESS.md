@@ -156,7 +156,30 @@
 
 ---
 
-### ⏯️ [2026-06-24 세션 종료] 다음 세션 여기서 이어서 ◀◀◀ 최신 중단지점
+### ⏯️ [2026-06-25 세션 종료] 다음 세션 여기서 이어서 ◀◀◀ 최신 중단지점
+
+**오늘(06-25) 한 일:**
+- **Athena 조사 실전 1건:** 정체불명 버킷 `amazon-sagemaker-455535733131-us-east-1-c07sezmrr3gu1z`(버지니아)를 누가 만들었나 추적.
+  - CloudTrail `CreateBucket`(us-east-1) → 만든 주체 = `AmazonDataZoneEnvironmentDeployer` 서비스역할, `invokedby=datazone.amazonaws.com`.
+  - 사람 추적(`datazone` `Create%` + `invokedby IS NULL`) → **본인(`user/mzc-pmg`)이 06-18 06:06 UTC 콘솔에서 `CreateDomain`**(SageMaker Unified Studio/DataZone 도메인) 클릭 → 33초 뒤 DataZone이 버킷 자동생성.
+  - **우리 Terraform과 무관 확정**(`mzc-terraform` 전체 grep `sagemaker|datazone` = 0건). 콘솔 클릭으로 IaC 밖 "그림자 리소스" 생성된 실제 사례 → **사용자가 DataZone 도메인 삭제 완료**. (※ 며칠 뒤 Athena로 `DeleteBucket` 확인하면 마무리 깔끔 — 발표/면접 소재: 콘솔 드리프트를 CloudTrail+Athena로 30초 추적.)
+- **공부 카드 진행 (`docs/study/01_prevention.md`):**
+  - 카드 1 드릴 = 사용자가 건너뜀(말하기 미실시).
+  - 카드 2(수명주기) 드릴 = 사용자 말로 답 → 채점. Q1⭕/Q2⭕(보관=보안)/Q3🔺(Glacier 인과: "못 지우니까 싼 데로→기간끝 삭제"로 교정). Glacier 단점(restore 시간/비용) 꼬리질문 남김.
+  - **카드 3(KMS CMK) 신규 작성 완료** — 실제 `kms_security.tf` 반영(자동회전/30일 타임록/옵션A 키정책 2 statement/alias). 드릴4문항+모범답안 포함.
+  - 카드 3 드릴 채점: Q1⭕/Q2🔺(루트 남긴 진짜 이유=lockout)/Q3⭕/Q4❌→교정(봉투암호화: `GenerateDataKey`가 곧 암호화라 `Encrypt` 불필요).
+  - **심화 보강 2건 설명 완료:** ⓐ KMS lockout이 복구불가인 이유(`PutKeyPolicy`도 키정책이 통제 → 루트 제거+누락 시 닭-달걀 영구잠금. 옵션A 루트=비상 열쇠). ⓑ statement2 액션별 역할표(GenerateDataKey=쓰기/Decrypt=읽기/DescribeKey=메타조회) + 안 준 권한 비교.
+
+**▶ 내일 시작점 (순서):**
+1. **`docs/study/01_prevention.md` 카드 4 작성부터** — SSE-KMS 암호화 강제 + S3 Bucket Key. 실제 `s3_security.tf` 읽고 → 카드 작성 → 드릴 → 채점.
+2. 이어서 카드 5(OAC) → 6(SG체이닝) → 7(워커 제로인바운드) → 8(IAM 하드닝). 같은 형식(카드→드릴→채점).
+3. 예방 끝나면 `02_perimeter`~`05_response` 진행.
+4. (공부 충분히 된 뒤) 캡쳐 = `docs/CAPTURE_CHECKLIST.md`.
+> ※ 카드 1·2는 이미 작성됨. 드릴 말하기는 사용자가 원할 때. 카드 작성 = 방식②(카드→멘토질문→답→보강).
+
+---
+
+### ⏯️ [2026-06-24 세션 종료] (히스토리)
 
 **📌 상황 전환:** 멘토 방문 후 피드백 = **"작업 내용을 말로 설명 못 함."** → 캡쳐보다 **"말로 설명하는 공부"가 우선**으로 결정. (캡쳐는 이해 후 자동으로 따라옴)
 
