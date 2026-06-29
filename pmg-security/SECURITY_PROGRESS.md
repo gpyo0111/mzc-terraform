@@ -171,11 +171,17 @@
   - **심화 보강 2건 설명 완료:** ⓐ KMS lockout이 복구불가인 이유(`PutKeyPolicy`도 키정책이 통제 → 루트 제거+누락 시 닭-달걀 영구잠금. 옵션A 루트=비상 열쇠). ⓑ statement2 액션별 역할표(GenerateDataKey=쓰기/Decrypt=읽기/DescribeKey=메타조회) + 안 준 권한 비교.
 
 **▶ 내일 시작점 (순서):**
-1. **`docs/study/01_prevention.md` 카드 4 작성부터** — SSE-KMS 암호화 강제 + S3 Bucket Key. 실제 `s3_security.tf` 읽고 → 카드 작성 → 드릴 → 채점.
-2. 이어서 카드 5(OAC) → 6(SG체이닝) → 7(워커 제로인바운드) → 8(IAM 하드닝). 같은 형식(카드→드릴→채점).
-3. 예방 끝나면 `02_perimeter`~`05_response` 진행.
+1. ~~카드 4~8 작성·드릴~~ ✅ **완료 (2026-06-29)** — 예방(Prevention) 카드 1~8 전부 작성+드릴 채점 끝. `01_prevention.md` 맨 아래 복습표 추가됨.
+2. **다음 = `02_perimeter` (경계 — WAF) 카드 작성부터.** 실제 `waf.tf` 읽고 → 카드 작성 → 드릴 → 채점. (study 폴더에 02 파일 신설)
+3. 이어서 `03_detection`(CloudTrail/FlowLogs/GuardDuty/Athena/AccessAnalyzer) → `04_alerting`(EventBridge/SNS) → `05_response`(Lambda 자가복구 2종) 같은 형식.
 4. (공부 충분히 된 뒤) 캡쳐 = `docs/CAPTURE_CHECKLIST.md`.
-> ※ 카드 1·2는 이미 작성됨. 드릴 말하기는 사용자가 원할 때. 카드 작성 = 방식②(카드→멘토질문→답→보강).
+> ※ 카드 작성 = 방식②(카드→드릴→채점). 카드 4~8 드릴 채점 결과: 대체로 합격, 약점은 ⓐSSE-KMS Bucket Key 봉투암호화 ⓑOAC audio 제외 사유(KMS 복호화권한 없음) ⓒListBucket↔GetObject 구분 ⓓ워커 egress 개선(VPCE).
+
+**📌 포트폴리오 관련 (2026-06-29 신규):**
+- `docs/PORTFOLIO_BRIEF.md` 작성 — 이력서/발표용 **자체완결 브리프**(개요·아키텍처·6단계작업·기술스택·판단력·ISMS-P매핑·트러블슈팅2건·이력서불릿). 브라우저 Claude에 이 파일+핵심tf+캡처 주면 포트폴리오 생성 가능.
+- 팀 포트폴리오 양식 = **PPT/구글슬라이드**. 전략: 디자인은 팀 템플릿이 담당, Claude는 슬라이드별 내용(제목/불릿/시각자료/발표노트)만 → 팀 템플릿에 복붙. (슬라이드 내용 초안 작성은 사용자가 원하면 진행)
+- 첨부용 핵심 .tf 추천 ≈ 18개(주연16: kms/s3/security_groups/worker_security_group/iam_hardening/waf/monitoring_security/guardduty_security/access_analyzer/athena_results/security_event_alerts/monitoring_alerts/lambda_auto_remediation+py/cloudtrail_auto_recovery+py + 조연: provider/data_*).
+- ⚠️ 공개 시 계정ID(455535733131)·CloudFront ID·버킷명 마스킹 권장.
 
 ---
 
