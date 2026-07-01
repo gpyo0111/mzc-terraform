@@ -49,3 +49,21 @@ terraform import aws_backup_plan.securevoice_plan <BACKUP_PLAN_ID>
 # S3 Versioning 설정 가져오기 (오디오 버킷명 입력 필요)
 terraform import aws_s3_bucket_versioning.audio <AUDIO_BUCKET_NAME>
 ```
+
+---
+
+## 💡 모듈 상세 가이드 (Why, What, How)
+
+### 왜 필요한가? (Why)
+* **데이터 복구력 및 재해 복구(DR) 확보**: 예기치 못한 시스템 오류, 랜섬웨어 공격, 또는 작업자의 실수로 데이터베이스나 저장소가 유실 및 손상되는 시나리오에 대응하여 백업을 자동화하고 안전하게 데이터를 복구하기 위해 필요합니다.
+* **결합도 분리**: 메인 데이터베이스와 런타임 환경 코드(`10-persistent`, `20-runtime`)의 구성을 방해하거나 훼손하지 않도록, 독립적으로 작동하는 백업 제어 모듈을 두어 유지보수의 유연성을 높입니다.
+
+### 무슨 기능을 하는가? (What)
+* **자동화된 일일 백업 정책**: AWS Backup Vault 및 Plan을 정의하여 매일 정해진 시간(KST 14:00)에 데이터베이스 백업을 자동화하고, 1일의 보존 수명 주기 후에 자동으로 파기되도록 일정을 관리합니다.
+* **안정적인 타겟팅**: RDS 인스턴스의 ARN을 직접 타겟팅하여 인프라 태그의 누락이 발생하더라도 백업 정합성을 보장합니다.
+* **객체 버전 관리(S3 Versioning)**: 오디오 데이터 버킷의 버전 관리를 강제 활성화(`Enabled`)하여 덮어쓰기나 의도치 않은 삭제 상황에서 특정 과거 시점의 데이터로 즉각 롤백할 수 있게 돕습니다.
+
+### 어떻게 사용하는가? (How)
+1. `backup-ops` 디렉터리로 이동합니다.
+2. `terraform init` 및 `terraform apply`를 실행하여 AWS Backup 및 S3 Versioning 정책을 배포합니다.
+3. (선택 사항) 이미 수동으로 생성한 백업 인프라가 존재한다면 중복 생성을 막기 위해 제공되는 `terraform import` 명령어들을 활용하여 기존 자원 상태를 가져옵니다.

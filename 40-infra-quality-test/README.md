@@ -70,3 +70,27 @@ cd mzc-terraform/40-infra-quality-test
 bash run_all.sh 09
 # 전체 실행 (09 포함)
 bash run_all.sh
+
+---
+
+## 💡 모듈 상세 가이드 (Why, What, How)
+
+### 왜 필요한가? (Why)
+* **인프라 설정의 정합성 보증**: 테라폼으로 배포된 AWS 리소스들(VPC, Subnet, RDS, ECS, S3, IAM 등)이 최초에 의도한 설계 표준 및 보안 요구사항(예: Multi-AZ 활성화 여부, S3 퍼블릭 차단 등)을 충족하는지 자동화된 방식으로 확인하기 위해 필요합니다.
+* **무중단 점검**: 팀의 메인 인프라 정의 코드(00-~20-)를 전혀 수정하지 않은 채, 읽기 전용(Read-Only) API 조회를 통해 실행 중인 운영 환경에 부작용 없이 인프라의 품질을 검증할 수 있습니다.
+
+### 무슨 기능을 하는가? (What)
+* **영역별 자동 검증 스크립트**:
+  - `ecs_health`: 모든 ECS 서비스의 실행 상태(RUNNING) 및 API HTTP 응답 상태를 검증합니다.
+  - `autoscaling`: CloudWatch Alarm의 임계치 및 알람 동작 조건 설정값을 확인합니다.
+  - `rds_connectivity`: 데이터베이스의 고가용성(Multi-AZ), 삭제 방지 설정, 백업 주기 등을 점검합니다.
+  - `alb_routing`: 로드밸런서의 상태, DNS 확인 및 API 엔드포인트 라우팅을 점검합니다.
+  - `s3_security`: 중요 저장소(S3)의 KMS 암호화와 퍼블릭 접근 차단 여부를 체크합니다.
+  - `iam_security`: ECS 태스크가 최소 권한 원칙에 맞추어 Secrets Manager 시크릿에 접근하고 있는지 검증합니다.
+* **종합 결과 레포팅**: `run_all.sh` 스크립트를 통해 전체 테스트를 실행한 뒤 각 항목의 합격(PASS) / 불합격(FAIL) 상태를 요약 테이블 형태로 요약 제공합니다.
+
+### 어떻게 사용하는가? (How)
+1. `40-infra-quality-test` 디렉터리로 이동합니다.
+2. 검증 도구용 의존성을 설치합니다: `pip install -r requirements.txt`
+3. AWS STS 자격 증명을 활성화합니다.
+4. `bash run_all.sh`를 실행하여 전체 품질 검사를 수행하고, 최종 요약 테이블을 분석하여 `[FAIL]` 항목이 존재할 경우 해당 인프라 설정을 수정합니다.

@@ -21,8 +21,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOAD_TEST_DIR="${SCRIPT_DIR}/../mzc-load-test"
-TF_DIR="${SCRIPT_DIR}/30-load-test"
+LOAD_TEST_DIR="${SCRIPT_DIR}"
+TF_DIR="${SCRIPT_DIR}"
 
 AWS_REGION="${AWS_REGION:-ap-northeast-2}"
 AWS_PROFILE="${AWS_PROFILE:-bya}"
@@ -36,11 +36,17 @@ ACTION="${1:-apply}"
 # ── 대상 호스트 자동 조회 (명시하지 않은 경우) ───────────────────────────────
 if [[ -z "${TARGET_HOST:-}" ]]; then
   echo "[INFO] TARGET_HOST 미설정 → 20-runtime tfstate에서 ALB DNS 조회 중..."
-  ALB_DNS=$(aws s3 cp \
-    "s3://securevoice-terraform-state-${ACCOUNT_ID}-${AWS_REGION}/securevoice/dev/20-runtime/terraform.tfstate" - \
-    --profile "${AWS_PROFILE}" --region "${AWS_REGION}" \
-    | python3 -c "import sys,json; s=json.load(sys.stdin); \
-      print(s['outputs']['alb_dns_name']['value'])" 2>/dev/null || true)
+  aws s3 cp \
+    "s3://securevoice-terraform-state-${ACCOUNT_ID}-${AWS_REGION}/securevoice/dev/20-runtime/terraform.tfstate" \
+    "./temp_tfstate.json" \
+    --profile "${AWS_PROFILE}" --region "${AWS_REGION}" >/dev/null 2>&1 || true
+
+  if [[ -f "./temp_tfstate.json" ]]; then
+    ALB_DNS=$(python3 -c "import json; s=json.load(open('./temp_tfstate.json')); print(s['outputs']['alb_dns_name']['value'])" 2>/dev/null || true)
+    rm -f "./temp_tfstate.json"
+  else
+    ALB_DNS=""
+  fi
 
   if [[ -n "${ALB_DNS}" ]]; then
     TARGET_HOST="http://${ALB_DNS}"
