@@ -3,7 +3,7 @@
 SecureVoice 인프라 품질 테스트 스크립트 모음입니다.  
 **팀 공유 Terraform 코드(10-/20-/30-)는 수정하지 않으며**, AWS 리소스를 직접 조회·검증합니다.
 
-> SQS/DLQ 카오스 시나리오는 `mzc-chaos-testing/scenarios/01_sqs_dlq` 에서 별도 관리합니다.
+> SQS/DLQ 카오스 시나리오는 `01_sqs_dlq` 모듈로 통합되어 함께 제공됩니다.
 
 ---
 
@@ -26,6 +26,7 @@ cat config.sh
 
 | 모듈 | 검증 영역 | 실행 |
 |------|----------|------|
+| `01_sqs_dlq` | SQS/DLQ 이관 흐름, DLQ 알람, Redrive 및 멱등성 | `bash 01_sqs_dlq/run.sh` |
 | `02_ecs_health` | ECS 서비스 상태, 태스크 RUNNING, 헬스체크 | `bash 02_ecs_health/run.sh` |
 | `03_autoscaling` | CloudWatch Alarm, 스케일링 정책 설정값 | `bash 03_autoscaling/run.sh` |
 | `04_rds_connectivity` | Multi-AZ, 백업 보존, Deletion Protection | `bash 04_rds_connectivity/run.sh` |
@@ -49,6 +50,7 @@ bash run_all.sh
 
 | 모듈 | 핵심 기준 |
 |------|---------|
+| SQS/DLQ | DLQ 이관 60s 이내, CloudWatch Alarm 발생, Redrive 메시지 소모, 멱등성 만족 |
 | ECS | api/free-worker/paid-worker 모두 RUNNING, Health Check 200 |
 | AutoScaling | Scale-out Alarm threshold 설정값 정확 (free≥2, paid≥3) |
 | RDS | Multi-AZ=true, BackupRetention=7, DeletionProtection=true |

@@ -15,6 +15,7 @@ source "${SCRIPT_DIR}/config.sh"
 
 # ── 실행 대상 모듈 목록 ───────────────────────────────────────────────────────
 ALL_MODULES=(
+    "01_sqs_dlq"
     "02_ecs_health"
     "03_autoscaling"
     "04_rds_connectivity"
