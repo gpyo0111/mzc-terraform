@@ -156,7 +156,27 @@
 
 ---
 
-### ⏯️ [2026-06-25 세션 종료] 다음 세션 여기서 이어서 ◀◀◀ 최신 중단지점
+### ⏯️ [2026-06-30 세션 종료] ◀◀◀ 최신 중단지점 (집=C드라이브에서 이어서)
+
+**오늘(06-30) 한 일:**
+- **study 카드 전부 완성 + 말하기 드릴 채점 완료** (`docs/study/`): 02 경계(WAF) 카드1~4, 03 탐지 카드1~6, 04 알림 카드1~4, 05 대응 카드1~3 전부 작성+드릴. 반복 약점: ①"비용"으로 뭉뚱그림(실제론 노이즈차단·파괴위험) ②설계 의도(격리/위생·코드↔실물 일치·되돌림이 정답) 놓침 ③자동화 범위("오작동해도 안전한 것만"). 강점: 큰그림(사건→EventBridge/CloudWatch→SNS→메일→Lambda), Count vs Block.
+- **🔗 WAF를 실제 CloudFront(mzmt.shop, `E2ZAHL4TTM1M8O`)에 연결 완료** — CloudFront 무료플랜 자동WAF(`CreatedByCloudFront-79bec9c7`) **플랜 취소** → `securevoice-dev-waf` 연결. 상세는 위 "🔗 WAF↔CloudFront 실제 연결 완료" 섹션. 임시파일(dist.json/newconfig.json/update-result.json) 정리함.
+- **자기소개서(메가존클라우드) 6항목 초안 완성** — 채팅에만 있음(사용자 요청으로 파일 저장 안 함, 이력서 컨설팅에서 최종 점검 예정). 핵심 내용:
+  - **1 지원동기**: 시설관리(사수없이 혼자 장애해결)→인프라 흥미→"고치기보다 설계"→클라우드 부트캠프.
+  - **2 직무·프로젝트**: 재직 중 네트워크관리사·정보처리산업기사 취득 / 온프레미스(선착순구매·레거시구축·Grafana로 k8s 비교) / SecureVoice 보안레이어(KMS·WAF·CloudTrail·GuardDuty·Lambda, Terraform) / "다 쓰려다 비용·운영효율로 간추림" 판단 / 수료후 CI/CD 계획.
+  - **3 문제해결**: 허브 고장 원인 좁혀 복구 / 클라우드 SG 삭제를 CloudTrail로 추적→팀원실수 확인·복구.
+  - **4 협업·커뮤니케이션**: 온프레미스 핫스팟 IP이슈→tailscale 발견·팀 공유 + 시간부족에 역할분담 / 라이선스 업체협상 10%절감→다지점총괄·조기연봉인상 제안.
+  - **5 성장·포부**: 스터디(동향공유·프로젝트) + AI 활용(결과 이해해 내것으로) + 보안전문성 심화+비용효율 / 좌우명 **"필요한 사람이 되자"**.
+  - **6 Together**: 섬 포병, 간부부족으로 병사인 내가 팀장→외부훈련 밤낮 모의훈련→성공. Trust&Growth(믿고 함께성장) + 고객멘트로 Power of Three 터치. (마무리는 담백하게 "혼자 앞서가기보다 팀과 함께" 톤)
+
+**▶ 다음 (집에서 이어서):**
+1. **캡처 작업 시작** — `docs/CAPTURE_CHECKLIST.md` 순서대로 **처음부터**. 권장 순서: 서울 한 바퀴 → us-east-1 한 바퀴 → Athena 쿼리 실행 → 라이브 데모(Lambda `sg_auto_revoke_enabled=true`/`cloudtrail_auto_recover_enabled=true`로 활성화 후, 끝나면 원복). **WAF↔CloudFront attach는 이제 캡처 가능(✅연결됨).**
+2. 이후 **PPT / 포트폴리오** 작성 (`docs/PORTFOLIO_BRIEF.md` 활용). ⚠️ 공개 시 계정ID·CloudFront ID·버킷명 마스킹.
+> ⚠️ 집=C드라이브(`/mnt/c/...`). 캡처는 콘솔 작업이라 경로 무관. terraform 명령 쓸 일 있으면 C 경로로 `init`(archive provider) 1회 필요할 수 있음.
+
+---
+
+### ⏯️ [2026-06-25 세션 종료] (히스토리)
 
 **오늘(06-25) 한 일:**
 - **Athena 조사 실전 1건:** 정체불명 버킷 `amazon-sagemaker-455535733131-us-east-1-c07sezmrr3gu1z`(버지니아)를 누가 만들었나 추적.
@@ -172,9 +192,12 @@
 
 **▶ 내일 시작점 (순서):**
 1. ~~카드 4~8 작성·드릴~~ ✅ **완료 (2026-06-29)** — 예방(Prevention) 카드 1~8 전부 작성+드릴 채점 끝. `01_prevention.md` 맨 아래 복습표 추가됨.
-2. **다음 = `02_perimeter` (경계 — WAF) 카드 작성부터.** 실제 `waf.tf` 읽고 → 카드 작성 → 드릴 → 채점. (study 폴더에 02 파일 신설)
-3. 이어서 `03_detection`(CloudTrail/FlowLogs/GuardDuty/Athena/AccessAnalyzer) → `04_alerting`(EventBridge/SNS) → `05_response`(Lambda 자가복구 2종) 같은 형식.
+2. ~~`02_perimeter` (경계 — WAF) 카드 작성~~ ✅ **완료 (2026-06-30)** — 카드 1~4(`docs/study/02_perimeter.md`). **드릴(말하기) 채점도 완료**: 카드1 Q1🔺Q2❌Q3🔺 / 카드2 Q1🔺Q2⭕Q3⭕Q4❌ / 카드3 Q1🔺Q2🔺Q3❌ / 카드4 Q1⭕Q2❌Q3🔺. **반복 약점 3개**: ①인과 거꾸로/뭉뚱그림(WAF가글로벌→CloudFront가글로벌, default allow=블랙리스트) ②메커니즘만 말하고 "왜/무엇막나" 안 답함 ③사실오류(CloudFront 무료버전이라 WAF 못붙임=틀림, 실제는 배포가 팀소유·콘솔이라 소유권경계 때문). 카드3에 알람연결·limit튜닝, 카드4에 Shield상세 보강함.
+3. ~~`03_detection`/`04_alerting`/`05_response` 카드 작성~~ ✅ **완료 (2026-06-30)** — 실제 tf 다 읽고 작성: `03_detection.md`(카드6: CloudTrail/DataEvents/FlowLogs→S3/GuardDuty/AccessAnalyzer/Athena), `04_alerting.md`(카드4: SNS2토픽/EventBridge라우팅/고위험정책이벤트4종/WAF알람), `05_response.md`(카드3: SG자동회수/CloudTrail자동복구/공통철학). 전부 흐름·무엇·왜·용어·🔥정직포인트·드릴·모범답안·복습표 템플릿.
+   **▶ 다음 세션 시작점: `03_detection` 카드 1부터 말하기 드릴(채점) 진행** → 04 → 05 순서.
 4. (공부 충분히 된 뒤) 캡쳐 = `docs/CAPTURE_CHECKLIST.md`.
+
+> 📄 **이력서 초안 작성함 (2026-06-30):** 메가존클라우드 자소서 6항목(지원동기/직무학습·프로젝트/문제해결/협업/성장계획/Trinity Values-Together) 채팅으로 초안 제공. 추후 별도 파일화 가능. 핵심소재: 학원 시설관리 트러블슈팅 3건(허브교체/랙장비 속도저하/윈도우서버 구축, 사수없이 자가해결), 온프레미스 레거시+모니터링 vs k8s 비교, SecureVoice 보안레이어. 자바 국비경험은 "개발기초→인프라→클라우드" 성장서사로 포함(취업실패 프레임 금지).
 > ※ 카드 작성 = 방식②(카드→드릴→채점). 카드 4~8 드릴 채점 결과: 대체로 합격, 약점은 ⓐSSE-KMS Bucket Key 봉투암호화 ⓑOAC audio 제외 사유(KMS 복호화권한 없음) ⓒListBucket↔GetObject 구분 ⓓ워커 egress 개선(VPCE).
 
 **📌 포트폴리오 관련 (2026-06-29 신규):**
@@ -391,4 +414,22 @@
 
 - GuardDuty: 유지할지 제거할지 (비용 vs 위협탐지 가치) — #4에서 다룸
 - CloudTrail→CloudWatch 스트리밍: 전 워크로드에 필요한지 — #5에서 다룸
-- WAF CloudFront 연결이 실제로 콘솔에서 돼 있는지 확인 필요
+- ~~WAF CloudFront 연결이 실제로 콘솔에서 돼 있는지 확인 필요~~ ✅ **해결 (2026-06-30)** — 아래 참조.
+
+## 🔗 WAF ↔ CloudFront 실제 연결 완료 (2026-06-30) — 중요 발견+해결
+
+**발견:** CloudFront(mzmt.shop, 배포ID `E2ZAHL4TTM1M8O`)에 우리 `securevoice-dev-waf`가 **안 붙어 있었음.** 대신 CloudFront "보안 보호(security protections)" **무료 플랜이 자동 생성한 WAF**(`CreatedByCloudFront-79bec9c7`, 3룰)가 붙어 실제 보호 중이었음 → **우리 Terraform WAF(5룰)는 만들어만 두고 미적용 상태였던 것 확정.**
+
+**왜 콘솔/CLI로 교체가 막혔나:** CloudFront 보안 플랜 **구독이 있으면 WebACLId 교체/제거 금지**(`UpdateDistribution` 에러: "Distributions with a pricing plan subscription must have a web ACL resource"). WAF 콘솔의 "연결 해제"도 같은 이유로 플랜게이트됨.
+
+**해결 순서:** ① WAF 콘솔(Global) → `CreatedByCloudFront-79...` 선택 → 우측 **"플랜 취소"** 로 CloudFront 보안 구독 해지 → ② 우리 `securevoice-dev-waf` 연결. 결과: CloudFront 보안 탭에 **`securevoice-dev-waf (WAFv2)` Enabled** 확인.
+
+**우리 WAF ARN:** `arn:aws:wafv2:us-east-1:455535733131:global/webacl/securevoice-dev-waf/07039a35-41d2-4865-bed5-0a663da62d17`
+
+**남은 정리:** 버려진 자동 WAF(`CreatedByCloudFront-79bec9c7`, ID `f894f9a4-...`)는 플랜 취소로 분리됐는지 확인 후 잔존 시 삭제. 캡처 = `docs/CAPTURE_CHECKLIST.md`의 WAF↔CloudFront attach 항목 충족.
+
+**🎤 발표/면접 소재(강력):** "Terraform으로 WAF를 만들었지만 실제론 CloudFront 무료 플랜의 자동 WAF가 붙어 있었다 = '코드로 만든 것 ≠ 실제 적용된 것'의 산 증거. CloudFront 보안 구독 잠금까지 진단해 플랜 취소 후 IaC WAF로 교체 → 단일 진실원(IaC) 일원화." (02_perimeter 카드4 '만든 것 vs 적용된 것' 실증)
+
+### 🟡 후속 결정거리 (지금 말고 나중)
+- 우리 WAF가 이제 **라이브** → 규칙 1~4는 여전히 Count(차단X), rate-limit만 Block. 정상 트래픽 영향 거의 0이나, #6(Count→Block 전환 튜닝)을 켤지 추후 로그 관찰 후 결정.
+- WAF BlockedRequests 알람(threshold 0)이 이제 실제로 발동 가능(rate-limit 차단 시).

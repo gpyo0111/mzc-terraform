@@ -37,7 +37,7 @@
 - [ ] **WAF & Shield(반드시 us-east-1) → Web ACLs → securevoice-dev-waf**. `waf.tf`
 - [ ] 해당 Web ACL → **Rules 탭**: 5개 규칙 목록(1~4 Count, 5 Block 보이게).
 - [ ] 규칙5 **DDoS-Rate-Limit-Rule** 상세(2000/5분, Block).
-- [ ] ⭐ **Associated AWS resources 탭** → CloudFront에 연결돼 있는지 **반드시 확인+캡쳐** (열린 항목: 실제 attach 검증).
+- [ ] ⭐ **Associated AWS resources 탭** → CloudFront(mzmt.shop)에 연결 **✅완료(2026-06-30, 플랜취소 후 IaC WAF로 교체)** → 지금 연결된 화면 캡쳐. 또는 CloudFront→보안탭에 `securevoice-dev-waf (WAFv2)` 표시 캡쳐.
 - [ ] (선택) WAF → **Sampled requests / CloudWatch 메트릭**(트래픽 잡히는 증거).
 
 ---
