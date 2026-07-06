@@ -31,39 +31,40 @@
 
 ```sql
 CREATE EXTERNAL TABLE IF NOT EXISTS securevoice_vpc_flow_logs (
-  version      int,
-  account_id   string,
+  version int,
+  account_id string,
   interface_id string,
-  srcaddr      string,   -- 출발지 IP
-  dstaddr      string,   -- 목적지 IP
-  srcport      int,
-  dstport      int,      -- 목적지 포트 (22=SSH, 3306=MySQL 등)
-  protocol     bigint,   -- IANA 프로토콜 번호 (6=TCP, 17=UDP)
-  packets      bigint,
-  bytes        bigint,   -- 전송 바이트 (대량=유출 의심)
-  start        bigint,   -- epoch 초
-  `end`        bigint,   -- epoch 초 (end는 예약어라 백틱 필요)
-  action       string,   -- ACCEPT / REJECT
-  log_status   string
+  srcaddr string,
+  dstaddr string,
+  srcport int,
+  dstport int,
+  protocol bigint,
+  packets bigint,
+  bytes bigint,
+  start bigint,
+  `end` bigint,
+  action string,
+  log_status string
 )
 PARTITIONED BY (year string, month string, day string, hour string)
 STORED AS PARQUET
 LOCATION 's3://securevoice-dev-vpc-flow-logs-455535733131/AWSLogs/aws-account-id=455535733131/aws-service=vpcflowlogs/aws-region=ap-northeast-2/'
 TBLPROPERTIES (
-  'projection.enabled'            = 'true',
-  'projection.year.type'          = 'integer',
-  'projection.year.range'         = '2026,2030',
-  'projection.month.type'         = 'integer',
-  'projection.month.range'        = '1,12',
-  'projection.month.digits'       = '2',
-  'projection.day.type'           = 'integer',
-  'projection.day.range'          = '1,31',
-  'projection.day.digits'         = '2',
-  'projection.hour.type'          = 'integer',
-  'projection.hour.range'         = '0,23',
-  'projection.hour.digits'        = '2',
-  'storage.location.template'     = 's3://securevoice-dev-vpc-flow-logs-455535733131/AWSLogs/aws-account-id=455535733131/aws-service=vpcflowlogs/aws-region=ap-northeast-2/year=${year}/month=${month}/day=${day}/hour=${hour}'
+  'projection.enabled' = 'true',
+  'projection.year.type' = 'integer',
+  'projection.year.range' = '2026,2030',
+  'projection.month.type' = 'integer',
+  'projection.month.range' = '1,12',
+  'projection.month.digits' = '2',
+  'projection.day.type' = 'integer',
+  'projection.day.range' = '1,31',
+  'projection.day.digits' = '2',
+  'projection.hour.type' = 'integer',
+  'projection.hour.range' = '0,23',
+  'projection.hour.digits' = '2',
+  'storage.location.template' = 's3://securevoice-dev-vpc-flow-logs-455535733131/AWSLogs/aws-account-id=455535733131/aws-service=vpcflowlogs/aws-region=ap-northeast-2/year=${year}/month=${month}/day=${day}/hour=${hour}'
 );
+
 ```
 
 ### 🔍 Flow Logs 보안 쿼리

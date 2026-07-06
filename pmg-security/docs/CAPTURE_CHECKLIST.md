@@ -15,29 +15,29 @@
 ## ① 예방 (Prevention) — docs/02
 
 ### S3
-- [ ] **S3 버킷 목록** (audio/model/web-static/state/cloudtrail-logs/vpc-flow-logs/athena-results) — 한 화면. *전체 그림*
-- [ ] audio 버킷 → **권한 탭 → 퍼블릭 액세스 차단(4개 ON)**. `s3_security.tf`
-- [ ] audio 버킷 → **관리 탭 → 수명주기 규칙** (guest 7일 / free·paid Glacier) 목록.
-- [ ] audio 버킷 → **속성 탭 → 기본 암호화 = SSE-KMS(securevoice 키) + Bucket Key 켜짐**.
-- [ ] 코드: `s3_security.tf` 퍼블릭차단/수명주기/SSE-KMS 블록.
+- [v] **S3 버킷 목록** (audio/model/web-static/state/cloudtrail-logs/vpc-flow-logs/athena-results) — 한 화면. *전체 그림*
+- [v] audio 버킷 → **권한 탭 → 퍼블릭 액세스 차단(4개 ON)**. `s3_security.tf`
+- [v] audio 버킷 → **관리 탭 → 수명주기 규칙** (guest 7일 / free·paid Glacier) 목록.
+- [v] audio 버킷 → **속성 탭 → 기본 암호화 = SSE-KMS(securevoice 키) + Bucket Key 켜짐**.
+- [x] 코드: `s3_security.tf` 퍼블릭차단/수명주기/SSE-KMS 블록.
 
 ### KMS
-- [ ] KMS(서울) → 고객관리형 키 → **securevoice-dev-master-key → 키 정책 탭**(statement 2개: EnableIAM + ECS역할). `kms_security.tf`
-- [ ] 같은 키 → **키 회전 ON / 삭제 대기 30일** 설정 화면.
+- [v] KMS(서울) → 고객관리형 키 → **securevoice-dev-master-key → 키 정책 탭**(statement 2개: EnableIAM + ECS역할). `kms_security.tf`
+- [v] 같은 키 → **키 회전 ON / 삭제 대기 30일** 설정 화면.
 
 ### 네트워크/접근통제
-- [ ] EC2(서울) → 보안그룹 → **RDS SG 인바운드 3306 = ECS SG에서만**(소스가 SG). `security_groups.tf`
-- [ ] **ALB SG 인바운드 443 = CloudFront Managed Prefix List**(`pl-...`). ⚠️ 80-from-0.0.0.0/0 보이면 그건 정직포인트(발표서 언급).
-- [ ] **워커 SG = 인바운드 0건**(제로 인바운드) 화면. `worker_security_group.tf`
-- [ ] IAM → 역할 → ECS api/worker 역할 → **attach된 ListBucket(버킷 한정) 정책**. `iam_hardening.tf`
+- [v] EC2(서울) → 보안그룹 → **RDS SG 인바운드 3306 = ECS SG에서만**(소스가 SG). `security_groups.tf`
+- [v] **ALB SG 인바운드 443 = CloudFront Managed Prefix List**(`pl-...`). ⚠️ 80-from-0.0.0.0/0 보이면 그건 정직포인트(발표서 언급).
+- [v] **워커 SG = 인바운드 0건**(제로 인바운드) 화면. `worker_security_group.tf`
+- [v] IAM → 역할 → ECS api/worker 역할 → **attach된 ListBucket(버킷 한정) 정책**. `iam_hardening.tf`
 
 ---
 
 ## ② 경계 (Perimeter) — docs/03
 - [ ] **WAF & Shield(반드시 us-east-1) → Web ACLs → securevoice-dev-waf**. `waf.tf`
-- [ ] 해당 Web ACL → **Rules 탭**: 5개 규칙 목록(1~4 Count, 5 Block 보이게).
-- [ ] 규칙5 **DDoS-Rate-Limit-Rule** 상세(2000/5분, Block).
-- [ ] ⭐ **Associated AWS resources 탭** → CloudFront(mzmt.shop)에 연결 **✅완료(2026-06-30, 플랜취소 후 IaC WAF로 교체)** → 지금 연결된 화면 캡쳐. 또는 CloudFront→보안탭에 `securevoice-dev-waf (WAFv2)` 표시 캡쳐.
+- [v] 해당 Web ACL → **Rules 탭**: 5개 규칙 목록(1~4 Count, 5 Block 보이게).
+- [v] 규칙5 **DDoS-Rate-Limit-Rule** 상세(2000/5분, Block).
+- [v] ⭐ **Associated AWS resources 탭** → CloudFront(mzmt.shop)에 연결 **✅완료(2026-06-30, 플랜취소 후 IaC WAF로 교체)** → 지금 연결된 화면 캡쳐. 또는 CloudFront→보안탭에 `securevoice-dev-waf (WAFv2)` 표시 캡쳐.
 - [ ] (선택) WAF → **Sampled requests / CloudWatch 메트릭**(트래픽 잡히는 증거).
 
 ---
