@@ -1,7 +1,5 @@
-# RDS DB Instance 데이터 소스 조회
-data "aws_db_instance" "mysql" {
-  db_instance_identifier = "${var.project_name}-${var.env}-mysql"
-}
+# AWS 계정 ID 조회
+data "aws_caller_identity" "current" {}
 
 # S3 오디오 버킷 데이터 소스 조회
 data "aws_s3_bucket" "audio" {
@@ -42,18 +40,18 @@ resource "aws_backup_plan" "securevoice_plan" {
   }
 }
 
-# 3. AWS Backup Selection 설정 (ARN 직접 지정 + 태그 기반)
+# 3. AWS Backup Selection 설정 (와일드카드 + 태그 기반 동적 매핑)
 resource "aws_backup_selection" "securevoice_backup_selection" {
   iam_role_arn = aws_iam_role.backup_role.arn
   name         = "securevoice-backup-selection"
   plan_id      = aws_backup_plan.securevoice_plan.id
 
-  # 뼈대 폴더 미수정으로 인해 RDS 태그 유실 시에도 백업이 유지되도록 ARN 직접 추가
+  # 특정 RDS 인스턴스 의존성을 배제하고, 리전 내 모든 RDS 중 태그가 있는 대상을 동적 선택
   resources = [
-    data.aws_db_instance.mysql.db_instance_arn
+    "arn:aws:rds:${var.aws_region}:${data.aws_caller_identity.current.account_id}:db:*"
   ]
 
-  # 기존 태그 기반 선택 호환성 유지
+  # 태그 기반 동적 백업 타겟팅
   selection_tag {
     type  = "STRINGEQUALS"
     key   = "Backup"
