@@ -1,32 +1,38 @@
 #!/usr/bin/env bash
 
-SNAPSHOT_ID="rds:securevoice-dev-mysql-2026-06-24-18-12"
-RESTORE_DB_ID="securevoice-dev-mysql-restore-test"
 PROFILE="bya"
+DB_INSTANCE_NAME="securevoice-dev-mysql"
+RESTORE_DB_ID="securevoice-dev-mysql-restore-pitr1"
 
 # 🔍 확인된 실제 서브넷 그룹 이름을 지정했습니다.
 SUBNET_GROUP_NAME="securevoice-dev-db-subnet-group" 
 
-echo "=== RDS Restore 테스트 시작 ==="
-echo "대상 스냅샷: $SNAPSHOT_ID"
+echo "=== RDS Point-in-Time Recovery (PITR) 테스트 시작 ==="
+
+# 5분 전의 UTC 시간 계산 (정확한 시점 지정을 위해 UTC 포맷 변환)
+RESTORE_TIME=$(date -u -d "5 minutes ago" +"%Y-%m-%dT%H:%M:%SZ")
+
+echo "복원 대상 원본 DB: $DB_INSTANCE_NAME"
+echo "시점 복구 기준 시각 (5분 전 UTC): $RESTORE_TIME"
 echo "생성할 임시 DB: $RESTORE_DB_ID (Multi-AZ 적용)"
 echo "대상 서브넷 그룹: $SUBNET_GROUP_NAME"
 echo "시작 시각: $(date)"
 
 START_TIME=$(date +%s)
 
-# 1. 복원 명령 전송
-echo "RDS 복원 요청 중..."
-aws rds restore-db-instance-from-db-snapshot \
-  --db-instance-identifier "$RESTORE_DB_ID" \
-  --db-snapshot-identifier "$SNAPSHOT_ID" \
+# 1. 시점 복구 명령 전송
+echo "RDS 시점 복구 요청 중..."
+aws rds restore-db-instance-to-point-in-time \
+  --source-db-instance-identifier "$DB_INSTANCE_NAME" \
+  --target-db-instance-identifier "$RESTORE_DB_ID" \
+  --restore-time "$RESTORE_TIME" \
   --db-subnet-group-name "$SUBNET_GROUP_NAME" \
   --profile "$PROFILE" \
   --multi-az > /dev/null
 
 # 복원 명령 실패 시 즉시 예외 처리
 if [ $? -ne 0 ]; then
-  echo -e "\n❌ [ERROR] RDS 복원 요청이 실패했습니다. 스크립트를 종료합니다."
+  echo -e "\n❌ [ERROR] RDS 시점 복구 요청이 실패했습니다. 스크립트를 종료합니다."
   exit 1
 fi
 
@@ -63,5 +69,5 @@ echo ""
 END_TIME=$(date +%s)
 TOTAL_ELAPSED=$((END_TIME - START_TIME))
 
-echo "=== RDS Restore 완료 ==="
+echo "=== RDS 복원 완료 ==="
 echo "총 소요 시간: $((TOTAL_ELAPSED / 60))분 $((TOTAL_ELAPSED % 60))초 (${TOTAL_ELAPSED}초)"

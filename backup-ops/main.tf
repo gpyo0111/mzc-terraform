@@ -28,6 +28,7 @@ resource "aws_backup_plan" "securevoice_plan" {
     rule_name         = "DailyBeforeOneDayDelete"
     target_vault_name = aws_backup_vault.securevoice_vault.name
     schedule          = "cron(0 5 ? * * *)"
+    enable_continuous_backup = true
 
     lifecycle {
       delete_after = 1
