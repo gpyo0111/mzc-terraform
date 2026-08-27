@@ -24,7 +24,6 @@ SecureVoiceGuard는 사용자가 업로드한 음성 파일을 AI 모델로 분�
 - [Architecture](#architecture)
 - [Terraform Layers](#terraform-layers)
 - [Key Design Decisions](#key-design-decisions)
-- [My Contribution](#my-contribution)
 - [Troubleshooting](#troubleshooting)
 - [Security](#security)
 - [Deployment](#deployment)
@@ -155,23 +154,6 @@ Private App Subnet의 기본 인터넷 경로는 NAT Gateway로 유지하되, �
 API와 Worker Task 수가 늘어날 때 각 컨테이너의 DB 연결이 한꺼번에 증가할 수 있습니다. RDS Proxy의 Connection Pool을 통해 DB 연결 폭주를 완화하고, ECS에는 RDS endpoint가 아닌 Proxy endpoint를 전달했습니다.
 
 RDS는 MySQL 8.0, Multi-AZ, gp3 20GB(최대 100GB), 7일 자동 백업, Private Data Subnet으로 구성했습니다. 애플리케이션 계정은 Master 계정과 분리하고 `SELECT`, `INSERT`, `UPDATE`, `DELETE` 권한만 부여합니다.
-
-## My Contribution
-
-**서기표 - Observability, Auto Scaling, AI 운영 자동화 및 비용 트러블슈팅**
-
-팀 공통 발표 구간에서는 전체 요구사항, AWS 아키텍처, ECS/SQS 비동기 처리 흐름과 시연을 함께 설명했습니다. 개인 발표 구간에서는 단순히 지표를 보는 수준을 넘어 **관측 → 확장 → 알림 → 대응**으로 이어지는 운영 판단 자동화를 담당했습니다.
-
-| 구분 | 담당 내용 | 저장소에서 확인 가능한 결과 |
-| --- | --- | --- |
-| Observability | ECS·SQS·RDS·ALB 핵심 지표 정의 및 통합 | `observability/` CloudWatch Dashboard JSON |
-| Reactive Scaling | Queue Depth와 Oldest Message Age 기반 확장 | `autoscaling/sqs-scaling.tf` |
-| Scheduled Scaling | 평일 업무 시간 사전 Worker 확보 | `autoscaling/scheduled-scaling.tf` |
-| FinOps / Network | NAT 과금 원인 분석 및 Endpoint 전환 | `10-persistent/endpoints.tf`, `20-runtime/endpoints.tf` |
-| Resource Tuning | AI 모델 OOM 원인 분석, Worker 4 vCPU / 8GB 조정 | `20-runtime/ecs.tf` |
-| Incident Response | Alarm, AI 요약, Slack, Runbook 연계 흐름 설계·검증 | 발표자료 및 운영 시나리오 |
-
-CloudWatch와 Terraform 저장소에는 Dashboard와 Auto Scaling 핵심 구현이 포함되어 있습니다. Prometheus/Grafana Custom Metric, Bedrock 기반 AI 장애 요약, Slack 알림은 프로젝트 운영 연동·발표 범위이며 이 저장소의 Terraform 리소스로는 포함하지 않았습니다. 공개 포트폴리오에서도 구현 코드와 확장 설계를 명확히 구분했습니다.
 
 ## Troubleshooting
 
