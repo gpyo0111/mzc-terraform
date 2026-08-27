@@ -62,6 +62,7 @@ SecureVoiceGuard는 사용자가 업로드한 음성 파일을 AI 모델로 분�
 ## Architecture
 
 ![SecureVoiceGuard 전체 AWS 아키텍처](docs/images/securevoice-architecture-overview.png)
+<img width="1542" height="912" alt="image" src="https://github.com/user-attachments/assets/3dc914fe-03db-41d2-b4af-15e9f58b6130" />
 
 <p align="center"><sub>팀 공통 발표 범위의 전체 서비스 아키텍처입니다. 이 저장소는 VPC 내부와 ALB, ECS, SQS, RDS, 운영 자동화 영역을 중심으로 관리합니다.</sub></p>
 
