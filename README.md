@@ -16,7 +16,7 @@ SecureVoiceGuard는 사용자가 업로드한 음성 파일을 AI 모델로 분�
 
 핵심은 **API와 AI 추론 작업을 SQS로 분리한 비동기 구조**, **무료/유료 워커의 독립 확장**, **Private Subnet과 VPC Endpoint를 이용한 보안·비용 최적화**, **CloudWatch와 Application Auto Scaling을 이용한 운영 자동화**입니다.
 
-> 이 저장소는 교육·포트폴리오 목적의 `dev` 환경을 기준으로 합니다. 현재 구현과 운영 검증 결과, 그리고 프로덕션 전환 시 필요한 개선 항목을 구분해서 기록했습니다.
+> `dev` 환경 기준 레포지토리
 
 ## Contents
 
