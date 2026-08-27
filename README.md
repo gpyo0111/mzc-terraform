@@ -22,7 +22,6 @@ SecureVoiceGuard는 사용자가 업로드한 음성 파일을 AI 모델로 분�
 
 - [Project Overview](#project-overview)
 - [Architecture](#architecture)
-- [Request Flow](#request-flow)
 - [Terraform Layers](#terraform-layers)
 - [Key Design Decisions](#key-design-decisions)
 - [My Contribution](#my-contribution)
@@ -80,41 +79,6 @@ SecureVoiceGuard는 사용자가 업로드한 음성 파일을 AI 모델로 분�
 
 외부 요청은 Public ALB까지만 들어오며, API와 Worker에는 Public IP를 할당하지 않습니다. DB는 Private Data Subnet에 배치하고 RDS Proxy 또는 허용된 DB Admin Security Group을 통해서만 `3306` 포트에 접근합니다.
 
-## Request Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant ALB as ALB
-    participant API as ECS API
-    participant S3 as S3 Audio/Result
-    participant DB as RDS Proxy / MySQL
-    participant SQS as Free/Paid SQS
-    participant Worker as ECS AI Worker
-
-    User->>ALB: POST /api/requests with audio
-    ALB->>API: Forward to healthy Fargate task
-    API->>S3: Upload original audio
-    API->>DB: Insert request status = QUEUED
-    API->>SQS: Send request_id and S3 key
-    API-->>User: Return request_id immediately
-
-    Worker->>SQS: Long polling (20 seconds)
-    SQS-->>Worker: Deliver message
-    Worker->>S3: Download audio and AI model
-    Worker->>Worker: Run voice authenticity inference
-    Worker->>S3: Upload result artifact
-    Worker->>DB: Update status = SUCCEEDED / FAILED
-    Worker->>SQS: Delete message after success
-
-    User->>ALB: GET /api/requests/{request_id}
-    ALB->>API: Forward request
-    API->>DB: Read current status and result
-    API-->>User: Return processing state or result
-```
-
-SQS는 API와 Worker 사이의 완충 지점입니다. API는 추론 완료를 기다리지 않고 요청 ID를 반환하며, Worker는 Long Polling으로 작업을 가져갑니다. 실패 메시지는 최대 3회 처리 후 DLQ로 이동하므로 정상 작업과 장애 작업을 분리할 수 있습니다.
 
 ## Terraform Layers
 
