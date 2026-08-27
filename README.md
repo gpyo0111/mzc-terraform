@@ -315,7 +315,7 @@ terraform apply -var='aws_profile=<profile>'
 
 ## Production Readiness
 
-현재 저장소는 `dev` 환경에서 아키텍처와 운영 흐름을 검증한 결과물입니다. 프로덕션 전환 시 다음 항목을 우선 개선할 계획입니다.
+현재 저장소는 `dev` 환경에서 아키텍쳐 기초 기반을 설계한 테라폼 코드들입니다. 후에 각 팀원이 각 파트에서 인프라 고도화를 담당했습니다.
 
 - ALB HTTP Listener를 ACM 인증서 기반 HTTPS로 전환하고 HTTP는 HTTPS로 Redirect
 - RDS Proxy의 TLS 필수 설정과 애플리케이션 DB TLS 연결 검증
